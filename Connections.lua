@@ -1,16 +1,12 @@
 return function(context)
     local Connections = {
-        items = {},
+        items = {}
     }
 
     function Connections.add(name, connection)
         Connections.disconnect(name)
         Connections.items[name] = connection
         return connection
-    end
-
-    function Connections.get(name)
-        return Connections.items[name]
     end
 
     function Connections.disconnect(name)
