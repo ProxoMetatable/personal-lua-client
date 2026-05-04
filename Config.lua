@@ -24,11 +24,6 @@ return function(context)
         },
         GUI = {
             Enabled = true
-        },
-        Keys = {
-            ToggleGUI = Enum.KeyCode.RightShift,
-            ToggleUI = Enum.KeyCode.Insert,
-            HoldFeature1 = Enum.UserInputType.MouseButton2
         }
     }
 
