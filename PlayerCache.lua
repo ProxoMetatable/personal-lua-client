@@ -3,90 +3,83 @@ return function(context)
     local LocalPlayer = Players.LocalPlayer
 
     local PlayerCache = {
-        players = {},
+        players = {}
     }
 
-    local function getCharacterParts(player)
-        local character = player.Character
-
-        if not character then
-            return nil
+    local function removeDrawing(obj)
+        if typeof(obj) == "table" then
+            for _, child in pairs(obj) do
+                removeDrawing(child)
+            end
+        else
+            pcall(function()
+                obj:Remove()
+            end)
         end
-
-        return {
-            character = character,
-            humanoid = character:FindFirstChildOfClass("Humanoid"),
-            root = character:FindFirstChild("HumanoidRootPart"),
-            head = character:FindFirstChild("Head"),
-        }
     end
 
-    function PlayerCache.create(player)
+    local function createDrawing(kind)
+        return Drawing.new(kind)
+    end
+
+    function PlayerCache.setup(player)
         if player == LocalPlayer then
             return nil
         end
 
-        local entry = PlayerCache.players[player]
-
-        if not entry then
-            entry = {
-                player = player,
-                drawings = {},
-                parts = {},
-                alive = false,
-            }
-
-            PlayerCache.players[player] = entry
+        if PlayerCache.players[player] then
+            return PlayerCache.players[player]
         end
 
-        PlayerCache.refresh(player)
+        local items = {
+            Box = createDrawing("Square"),
+            Text1 = createDrawing("Text"),
+            Bar = createDrawing("Square"),
+            Text2 = createDrawing("Text"),
+            Text3 = createDrawing("Text"),
+            Line = createDrawing("Line"),
+            Lines = {}
+        }
 
-        return entry
-    end
+        items.Box.Thickness = 2
+        items.Box.Transparency = 1
+        items.Box.Filled = false
+        items.Box.Visible = false
 
-    function PlayerCache.refresh(player)
-        local entry = PlayerCache.players[player]
+        items.Bar.Filled = true
+        items.Bar.Thickness = 0
+        items.Bar.Transparency = 1
+        items.Bar.Visible = false
 
-        if not entry then
-            return nil
+        for _, text in pairs({items.Text1, items.Text2, items.Text3}) do
+            text.Size = 13
+            text.Center = true
+            text.Outline = true
+            text.Font = 2
+            text.Visible = false
         end
 
-        local parts = getCharacterParts(player)
-        entry.parts = parts or {}
-        entry.alive = parts ~= nil and parts.humanoid ~= nil and parts.humanoid.Health > 0 and parts.root ~= nil
+        items.Line.Thickness = 1
+        items.Line.Transparency = 0.8
+        items.Line.Visible = false
 
-        return entry
+        PlayerCache.players[player] = items
+
+        return items
     end
 
     function PlayerCache.remove(player)
-        local entry = PlayerCache.players[player]
+        local data = PlayerCache.players[player]
 
-        if not entry then
-            return
+        if data then
+            removeDrawing(data)
+            PlayerCache.players[player] = nil
         end
-
-        for _, drawing in pairs(entry.drawings) do
-            if typeof(drawing) == "table" and drawing.Remove then
-                drawing:Remove()
-            end
-        end
-
-        PlayerCache.players[player] = nil
     end
 
-    function PlayerCache.refreshAll()
+    function PlayerCache.setupAll()
         for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                PlayerCache.create(player)
-            end
-        end
-
-        for player in pairs(PlayerCache.players) do
-            if not player.Parent then
-                PlayerCache.remove(player)
-            else
-                PlayerCache.refresh(player)
-            end
+            PlayerCache.setup(player)
         end
     end
 
