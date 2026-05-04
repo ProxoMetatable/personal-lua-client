@@ -18,61 +18,22 @@ return function(context)
 
     context.LocalCharacter = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 
-    local function bindType(bind)
-        local ok, result = pcall(function()
-            return tostring(bind.EnumType)
-        end)
-
-        if ok then
-            return result
+    local function saveConfig()
+        if Gui and Gui.saveConfig then
+            Gui.saveConfig()
         end
-
-        return nil
     end
 
-    local function matches(input, bind)
-        local kind = bindType(bind)
-
-        if kind == "Enum.KeyCode" then
-            return input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == bind
-        end
-
-        if kind == "Enum.UserInputType" then
-            return input.UserInputType == bind
-        end
-
-        return false
-    end
-
-    local function mouseDown(bind)
-        local ok, result = pcall(function()
-            return UserInputService:IsMouseButtonPressed(bind)
-        end)
-
-        return ok and result
-    end
-
-    local function bindDown(bind)
-        local kind = bindType(bind)
-
-        if kind == "Enum.KeyCode" then
-            return UserInputService:IsKeyDown(bind)
-        end
-
-        if kind == "Enum.UserInputType" then
-            if bind == Enum.UserInputType.MouseButton1 or bind == Enum.UserInputType.MouseButton2 or bind == Enum.UserInputType.MouseButton3 then
-                return mouseDown(bind)
-            end
-        end
-
-        return false
-    end
-
-    local function syncAimHold()
-        if Config.Feature1.Enabled then
-            Config.Feature1.Active = bindDown(Config.Keys.HoldFeature1)
-        else
+    local function toggleAim()
+        if not Config.Feature1.Enabled then
             Config.Feature1.Active = false
+            return
+        end
+
+        Config.Feature1.Active = not Config.Feature1.Active
+
+        if not Config.Feature1.Active then
+            Targeting.current = nil
         end
     end
 
@@ -87,43 +48,21 @@ return function(context)
             Gui.refresh()
         end
 
-        if Gui and Gui.saveConfig then
-            Gui.saveConfig()
-        end
+        saveConfig()
     end
 
-    local function onInputBegan(input, gameProcessed)
-        if matches(input, Config.Keys.HoldFeature1) then
-            Config.Feature1.Active = true
+    local function onInputBegan(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton2 then
+            toggleAim()
             return
         end
 
-        if matches(input, Config.Keys.ToggleGUI) then
-            if Gui and Gui.toggleVisibility then
-                Gui.toggleVisibility()
-            end
-            return
-        end
-
-        if matches(input, Config.Keys.ToggleUI) then
+        if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.Insert then
             toggleOverlay()
-            return
-        end
-
-        if gameProcessed then
-            return
-        end
-    end
-
-    local function onInputEnded(input)
-        if matches(input, Config.Keys.HoldFeature1) then
-            Config.Feature1.Active = false
-            Targeting.current = nil
         end
     end
 
     local function step()
-        syncAimHold()
         Overlay.updateAll()
         Targeting.update()
     end
@@ -163,7 +102,6 @@ return function(context)
         end
 
         Connections.add("InputBegan", UserInputService.InputBegan:Connect(onInputBegan))
-        Connections.add("InputEnded", UserInputService.InputEnded:Connect(onInputEnded))
         Connections.add("PlayerAdded", Players.PlayerAdded:Connect(function(player)
             PlayerCache.setup(player)
         end))
@@ -184,6 +122,8 @@ return function(context)
         end
 
         Main.running = false
+        Config.Feature1.Active = false
+        Targeting.current = nil
 
         if Gui and Gui.destroy then
             Gui.destroy()
