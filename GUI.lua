@@ -244,20 +244,6 @@ return function(context)
         })
 
         SettingsTab:CreateSection("Interface")
-        SettingsTab:CreateKeybind({
-            Name = "Menu Toggle Key",
-            CurrentKeybind = keyName(Config.Keys.ToggleGUI),
-            HoldToInteract = false,
-            Flag = "MenuToggleKey",
-            Callback = function()
-                if Rayfield:IsVisible() then
-                    Rayfield:SetVisibility(false)
-                else
-                    Rayfield:SetVisibility(true)
-                end
-            end
-        })
-
         SettingsTab:CreateButton({
             Name = "Hide Menu",
             Callback = function()
