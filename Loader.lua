@@ -1,4 +1,19 @@
 local BASE_URL = "https://raw.githubusercontent.com/ProxoMetatable/personal-lua-client/main/"
+local ALLOWED_USER_ID = 1871025207
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local context = {
+    BaseUrl = BASE_URL,
+    Modules = {},
+    Authorized = LocalPlayer and LocalPlayer.UserId == ALLOWED_USER_ID,
+}
+
+if not context.Authorized then
+    warn("personal-lua-client: unauthorized user")
+    return context
+end
 
 local order = {
     "Config.lua",
@@ -7,11 +22,6 @@ local order = {
     "Targeting.lua",
     "Overlay.lua",
     "Main.lua",
-}
-
-local context = {
-    BaseUrl = BASE_URL,
-    Modules = {},
 }
 
 local function fetch(path)
