@@ -10,6 +10,7 @@ return function(context)
     local Targeting = context.Targeting
     local Overlay = context.Overlay
     local Gui = context.Gui
+    local Binds = context.Binds
 
     local Main = {
         running = false
@@ -22,29 +23,42 @@ return function(context)
             return
         end
 
-        if Gui and Gui.usesOwnKeybinds then
+        if Gui and Gui.shouldBlockInput and Gui.shouldBlockInput() then
             return
         end
 
-        if input.KeyCode == Config.Keys.ToggleUI then
+        if Binds.matches(input, Config.Keys.ToggleGUI) then
+            if Gui and Gui.toggleVisibility then
+                Gui.toggleVisibility()
+            end
+            return
+        end
+
+        if Binds.matches(input, Config.Keys.ToggleUI) then
             Config.UI.Enabled = not Config.UI.Enabled
 
             if not Config.UI.Enabled then
                 Overlay.hideAll()
             end
+
+            if Gui and Gui.refresh then
+                Gui.refresh()
+            end
+
+            return
         end
 
-        if input.KeyCode == Config.Keys.HoldFeature1 then
+        if Binds.matches(input, Config.Keys.HoldFeature1) then
             Config.Feature1.Active = true
         end
     end
 
     local function onInputEnded(input)
-        if Gui and Gui.usesOwnKeybinds then
+        if Gui and Gui.shouldBlockInput and Gui.shouldBlockInput() then
             return
         end
 
-        if input.KeyCode == Config.Keys.HoldFeature1 then
+        if Binds.matches(input, Config.Keys.HoldFeature1) then
             Config.Feature1.Active = false
             Targeting.current = nil
         end
