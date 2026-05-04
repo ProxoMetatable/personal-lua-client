@@ -3,6 +3,7 @@ return function(context)
 
     local Config = context.Config
     local Binds = context.Binds
+    local CAPTURE_TEXT = "Press any key or mouse button"
 
     local Gui = {
         running = false,
@@ -83,6 +84,10 @@ return function(context)
             RemoveTextAfterFocusLost = false,
             Flag = keyName .. "BindText",
             Callback = function(text)
+                if text == CAPTURE_TEXT then
+                    return
+                end
+
                 local bind = Binds.set(Config.Keys, keyName, text)
 
                 if bind then
@@ -103,7 +108,7 @@ return function(context)
                     Button = buttonElement
                 }
                 Gui.blockUntil = os.clock() + 0.25
-                setInputValue(inputElement, "Press any key or mouse button")
+                setInputValue(inputElement, CAPTURE_TEXT)
                 setButtonText(buttonElement, "Capturing " .. label)
             end
         })
