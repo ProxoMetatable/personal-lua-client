@@ -12,10 +12,10 @@ The loader only starts for `UserId == 1871025207`. Other users receive a disable
 
 ## Controls
 
-- `Insert` toggles the overlay by default.
+- `RightShift` opens and closes the Rayfield settings menu by default.
 - Hold `LeftAlt` to activate Feature1 by default.
-- Click the `PL` button to show or hide the settings GUI.
-- Use the GUI to change Feature1, overlay styles, color, range, speed, target part, checks, and keybinds.
+- `Insert` toggles the overlay by default.
+- Use the Rayfield menu to change Feature1, overlay styles, color, range, speed, target part, checks, and keybinds.
 
 ## Files
 
@@ -25,7 +25,7 @@ The loader only starts for `UserId == 1871025207`. Other users receive a disable
 - `PlayerCache.lua` creates and removes Drawing objects per player.
 - `Targeting.lua` owns target selection and camera assist logic.
 - `Overlay.lua` updates boxes, names, health bars, distances, tracers, and the range circle.
-- `GUI.lua` builds the draggable customization panel.
+- `GUI.lua` builds the Rayfield customization menu.
 - `Main.lua` wires services, input, GUI lifecycle, player lifecycle, character lifecycle, and the render loop.
 
 ## Visibility
