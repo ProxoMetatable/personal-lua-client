@@ -27,7 +27,7 @@ local order = {
 }
 
 local function fetch(path)
-    return game:HttpGet(BASE_URL .. path, true)
+    return game:HttpGet(BASE_URL .. path .. "?v=" .. tostring(os.time()), true)
 end
 
 local function run(path)
