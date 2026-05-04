@@ -8,6 +8,69 @@ return function(context)
         overlayEnabledToggle = nil
     }
 
+    local bindOptions = {
+        "RightClick",
+        "LeftClick",
+        "MiddleClick",
+        "LeftAlt",
+        "RightAlt",
+        "RightShift",
+        "LeftShift",
+        "Insert",
+        "Q",
+        "E",
+        "F",
+        "C",
+        "X",
+        "Z",
+        "V"
+    }
+
+    local bindMap = {
+        RightClick = Enum.UserInputType.MouseButton2,
+        LeftClick = Enum.UserInputType.MouseButton1,
+        MiddleClick = Enum.UserInputType.MouseButton3,
+        LeftAlt = Enum.KeyCode.LeftAlt,
+        RightAlt = Enum.KeyCode.RightAlt,
+        RightShift = Enum.KeyCode.RightShift,
+        LeftShift = Enum.KeyCode.LeftShift,
+        Insert = Enum.KeyCode.Insert,
+        Q = Enum.KeyCode.Q,
+        E = Enum.KeyCode.E,
+        F = Enum.KeyCode.F,
+        C = Enum.KeyCode.C,
+        X = Enum.KeyCode.X,
+        Z = Enum.KeyCode.Z,
+        V = Enum.KeyCode.V
+    }
+
+    local bindNames = {}
+
+    for name, value in pairs(bindMap) do
+        bindNames[value] = name
+    end
+
+    local function bindName(value)
+        return bindNames[value] or "RightShift"
+    end
+
+    local function selected(option)
+        if type(option) == "table" then
+            return option[1]
+        end
+
+        return option
+    end
+
+    local function setBind(keyName, option)
+        local name = selected(option)
+        local bind = bindMap[name]
+
+        if bind then
+            Config.Keys[keyName] = bind
+        end
+    end
+
     local function hideOverlay()
         if context.Overlay and context.Overlay.hideAll then
             context.Overlay.hideAll()
@@ -34,6 +97,19 @@ return function(context)
         pcall(function()
             Gui.Rayfield:SetVisibility(not Gui.Rayfield:IsVisible())
         end)
+    end
+
+    local function addBindDropdown(tab, label, keyName)
+        tab:CreateDropdown({
+            Name = label,
+            Options = bindOptions,
+            CurrentOption = {bindName(Config.Keys[keyName])},
+            MultipleOptions = false,
+            Flag = keyName .. "BindDropdown",
+            Callback = function(option)
+                setBind(keyName, option)
+            end
+        })
     end
 
     local function createInterface()
@@ -79,6 +155,8 @@ return function(context)
                 end
             end
         })
+
+        addBindDropdown(AimTab, "Aim Hold Bind", "HoldFeature1")
 
         AimTab:CreateSlider({
             Name = "Range",
@@ -149,6 +227,8 @@ return function(context)
             end
         })
 
+        addBindDropdown(OverlayTab, "Overlay Toggle Bind", "ToggleUI")
+
         OverlayTab:CreateSection("Elements")
         OverlayTab:CreateToggle({
             Name = "Boxes",
@@ -213,7 +293,9 @@ return function(context)
             end
         })
 
-        SettingsTab:CreateSection("Fixed Controls")
+        SettingsTab:CreateSection("Interface")
+        addBindDropdown(SettingsTab, "Menu Toggle Bind", "ToggleGUI")
+
         SettingsTab:CreateButton({
             Name = "Hide Menu",
             Callback = function()
