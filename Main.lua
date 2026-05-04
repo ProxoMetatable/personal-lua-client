@@ -9,6 +9,7 @@ return function(context)
     local PlayerCache = context.PlayerCache
     local Targeting = context.Targeting
     local Overlay = context.Overlay
+    local Gui = context.Gui
 
     local Main = {
         running = false
@@ -21,11 +22,19 @@ return function(context)
             return
         end
 
+        if Gui and Gui.shouldBlockInput and Gui.shouldBlockInput() then
+            return
+        end
+
         if input.KeyCode == Config.Keys.ToggleUI then
             Config.UI.Enabled = not Config.UI.Enabled
 
             if not Config.UI.Enabled then
                 Overlay.hideAll()
+            end
+
+            if Gui and Gui.refresh then
+                Gui.refresh()
             end
         end
 
@@ -54,6 +63,10 @@ return function(context)
         Main.running = true
         PlayerCache.setupAll()
 
+        if Gui and Gui.start then
+            Gui.start()
+        end
+
         Connections.add("InputBegan", UserInputService.InputBegan:Connect(onInputBegan))
         Connections.add("InputEnded", UserInputService.InputEnded:Connect(onInputEnded))
         Connections.add("PlayerAdded", Players.PlayerAdded:Connect(function(player)
@@ -76,6 +89,11 @@ return function(context)
         end
 
         Main.running = false
+
+        if Gui and Gui.destroy then
+            Gui.destroy()
+        end
+
         Connections.disconnectAll()
         Overlay.hideAll()
         PlayerCache.clear()
