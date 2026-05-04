@@ -126,7 +126,9 @@ return function(context)
             DisableRayfieldPrompts = true,
             DisableBuildWarnings = true,
             ConfigurationSaving = {
-                Enabled = false
+                Enabled = true,
+                FolderName = "CometPrivate",
+                FileName = "config"
             },
             Discord = {
                 Enabled = false,
@@ -312,6 +314,10 @@ return function(context)
                 end
             end
         })
+
+        pcall(function()
+            Rayfield:LoadConfiguration()
+        end)
     end
 
     function Gui.start()
