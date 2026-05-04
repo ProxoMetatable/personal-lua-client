@@ -1,33 +1,12 @@
 return function(context)
-    local UserInputService = game:GetService("UserInputService")
-
     local Config = context.Config
-    local Binds = context.Binds
-    local CAPTURE_TEXT = "Press any key or mouse button"
 
     local Gui = {
         running = false,
         Rayfield = nil,
         Window = nil,
-        connections = {},
-        capturing = nil,
-        blockUntil = 0,
         overlayEnabledToggle = nil
     }
-
-    local function connect(signal, callback)
-        local connection = signal:Connect(callback)
-        table.insert(Gui.connections, connection)
-        return connection
-    end
-
-    local function disconnectAll()
-        for _, connection in ipairs(Gui.connections) do
-            connection:Disconnect()
-        end
-
-        Gui.connections = {}
-    end
 
     local function hideOverlay()
         if context.Overlay and context.Overlay.hideAll then
@@ -44,7 +23,7 @@ return function(context)
     end
 
     function Gui.shouldBlockInput()
-        return Gui.capturing ~= nil or os.clock() < Gui.blockUntil
+        return false
     end
 
     function Gui.toggleVisibility()
@@ -57,63 +36,6 @@ return function(context)
         end)
     end
 
-    local function setInputValue(input, value)
-        if input and input.Set then
-            pcall(function()
-                input:Set(value)
-            end)
-        end
-    end
-
-    local function setButtonText(button, value)
-        if button and button.Set then
-            pcall(function()
-                button:Set(value)
-            end)
-        end
-    end
-
-    local function addBind(tab, label, keyName)
-        local inputElement
-        local buttonElement
-
-        inputElement = tab:CreateInput({
-            Name = label,
-            CurrentValue = Binds.name(Config.Keys[keyName]),
-            PlaceholderText = "LeftAlt, RightClick, MouseButton2, M2",
-            RemoveTextAfterFocusLost = false,
-            Flag = keyName .. "BindText",
-            Callback = function(text)
-                if text == CAPTURE_TEXT then
-                    return
-                end
-
-                local bind = Binds.set(Config.Keys, keyName, text)
-
-                if bind then
-                    setInputValue(inputElement, Binds.name(bind))
-                else
-                    setInputValue(inputElement, Binds.name(Config.Keys[keyName]))
-                end
-            end
-        })
-
-        buttonElement = tab:CreateButton({
-            Name = "Capture " .. label,
-            Callback = function()
-                Gui.capturing = {
-                    Key = keyName,
-                    Label = label,
-                    Input = inputElement,
-                    Button = buttonElement
-                }
-                Gui.blockUntil = os.clock() + 0.25
-                setInputValue(inputElement, CAPTURE_TEXT)
-                setButtonText(buttonElement, "Capturing " .. label)
-            end
-        })
-    end
-
     local function createInterface()
         local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
@@ -124,13 +46,10 @@ return function(context)
             LoadingSubtitle = "private dev client",
             ShowText = "personal-lua-client",
             Theme = "Default",
-            ToggleUIKeybind = Enum.KeyCode.RightControl,
             DisableRayfieldPrompts = true,
-            DisableBuildWarnings = false,
+            DisableBuildWarnings = true,
             ConfigurationSaving = {
-                Enabled = true,
-                FolderName = "personal-lua-client",
-                FileName = "settings"
+                Enabled = false
             },
             Discord = {
                 Enabled = false,
@@ -160,8 +79,6 @@ return function(context)
                 end
             end
         })
-
-        addBind(AimTab, "Aim Hold Bind", "HoldFeature1")
 
         AimTab:CreateSlider({
             Name = "Range",
@@ -232,8 +149,6 @@ return function(context)
             end
         })
 
-        addBind(OverlayTab, "Overlay Toggle Bind", "ToggleUI")
-
         OverlayTab:CreateSection("Elements")
         OverlayTab:CreateToggle({
             Name = "Boxes",
@@ -298,9 +213,7 @@ return function(context)
             end
         })
 
-        SettingsTab:CreateSection("Interface")
-        addBind(SettingsTab, "Menu Toggle Bind", "ToggleGUI")
-
+        SettingsTab:CreateSection("Fixed Controls")
         SettingsTab:CreateButton({
             Name = "Hide Menu",
             Callback = function()
@@ -316,28 +229,6 @@ return function(context)
                 end
             end
         })
-
-        connect(UserInputService.InputBegan, function(input)
-            if not Gui.capturing or os.clock() < Gui.blockUntil then
-                return
-            end
-
-            local bind = Binds.fromInput(input)
-
-            if not bind then
-                return
-            end
-
-            Config.Keys[Gui.capturing.Key] = bind
-            setInputValue(Gui.capturing.Input, Binds.name(bind))
-            setButtonText(Gui.capturing.Button, "Capture " .. Gui.capturing.Label)
-            Gui.capturing = nil
-            Gui.blockUntil = os.clock() + 0.15
-        end)
-
-        pcall(function()
-            Rayfield:LoadConfiguration()
-        end)
     end
 
     function Gui.start()
@@ -353,8 +244,6 @@ return function(context)
 
     function Gui.destroy()
         Config.Feature1.Active = false
-        Gui.capturing = nil
-        disconnectAll()
 
         if Gui.Rayfield and Gui.Rayfield.Destroy then
             pcall(function()
