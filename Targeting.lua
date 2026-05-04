@@ -32,48 +32,89 @@ return function(context)
         return hit == nil
     end
 
-    function Targeting.findTarget()
-        Camera = Workspace.CurrentCamera
+    local function considerCharacter(best, character, player)
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        local part = character and character:FindFirstChild(Config.Feature1.Part)
 
-        local best = nil
-        local bestDist = Config.Feature1.Range
+        if not humanoid or humanoid.Health <= 0 or not root or not part then
+            return best
+        end
+
+        if player and Config.Feature1.Check2 and player.Team == LocalPlayer.Team then
+            return best
+        end
+
+        local pos, visible = Camera:WorldToViewportPoint(root.Position)
+
+        if not visible then
+            return best
+        end
+
         local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+        local screenPos = Vector2.new(pos.X, pos.Y)
+        local dist = (screenPos - screenCenter).Magnitude
 
+        if dist >= best.Distance then
+            return best
+        end
+
+        if Config.Feature1.Check1 and not wallCheck(character, part) then
+            return best
+        end
+
+        return {
+            Character = character,
+            Part = part,
+            Player = player,
+            Distance = dist
+        }
+    end
+
+    local function scanPlayers(best)
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character then
-                local character = player.Character
-                local humanoid = character:FindFirstChild("Humanoid")
-                local root = character:FindFirstChild("HumanoidRootPart")
-                local part = character:FindFirstChild(Config.Feature1.Part)
+                best = considerCharacter(best, player.Character, player)
+            end
+        end
 
-                if humanoid and humanoid.Health > 0 and root and part then
-                    if Config.Feature1.Check2 and player.Team == LocalPlayer.Team then
-                        continue
-                    end
+        return best
+    end
 
-                    local pos, visible = Camera:WorldToViewportPoint(root.Position)
+    local function scanWorkspaceModels(best)
+        local localCharacter = getLocalCharacter()
 
-                    if not visible then
-                        continue
-                    end
-
-                    local screenPos = Vector2.new(pos.X, pos.Y)
-                    local dist = (screenPos - screenCenter).Magnitude
-
-                    if dist < bestDist then
-                        if Config.Feature1.Check1 and not wallCheck(character, part) then
-                            continue
-                        end
-
-                        bestDist = dist
-                        best = player
-                    end
+        for _, descendant in ipairs(Workspace:GetDescendants()) do
+            if descendant:IsA("Model") and descendant ~= localCharacter and not Players:GetPlayerFromCharacter(descendant) then
+                if descendant:FindFirstChildOfClass("Humanoid") and descendant:FindFirstChild("HumanoidRootPart") then
+                    best = considerCharacter(best, descendant, nil)
                 end
             end
         end
 
-        Targeting.current = best
         return best
+    end
+
+    function Targeting.findTarget()
+        Camera = Workspace.CurrentCamera
+
+        local best = {
+            Character = nil,
+            Part = nil,
+            Player = nil,
+            Distance = Config.Feature1.Range
+        }
+
+        best = scanPlayers(best)
+        best = scanWorkspaceModels(best)
+
+        if best.Character then
+            Targeting.current = best
+            return best
+        end
+
+        Targeting.current = nil
+        return nil
     end
 
     function Targeting.update()
@@ -86,10 +127,9 @@ return function(context)
 
         local target = Targeting.findTarget()
 
-        if target and target.Character and target.Character:FindFirstChild(Config.Feature1.Part) then
-            local targetPart = target.Character[Config.Feature1.Part]
+        if target and target.Part then
             local current = Camera.CFrame.LookVector
-            local targetDir = (targetPart.Position - Camera.CFrame.Position).Unit
+            local targetDir = (target.Part.Position - Camera.CFrame.Position).Unit
 
             Camera.CFrame = CFrame.new(
                 Camera.CFrame.Position,
