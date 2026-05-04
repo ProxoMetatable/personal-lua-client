@@ -124,7 +124,7 @@ return function(context)
             LoadingSubtitle = "private dev client",
             ShowText = "personal-lua-client",
             Theme = "Default",
-            ToggleUIKeybind = "RightControl",
+            ToggleUIKeybind = Enum.KeyCode.RightControl,
             DisableRayfieldPrompts = true,
             DisableBuildWarnings = false,
             ConfigurationSaving = {
