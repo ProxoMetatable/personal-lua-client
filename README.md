@@ -8,25 +8,22 @@ A modular Lua client layout designed to be loaded from raw GitHub URLs.
 local client = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProxoMetatable/personal-lua-client/main/Loader.lua", true))()
 ```
 
-`client` is a shared context table containing:
+The loader only starts for `UserId == 1871025207`. Other users receive a disabled context and no modules are loaded.
 
-- `client.Config`
-- `client.Connections`
-- `client.PlayerCache`
-- `client.Targeting`
-- `client.Overlay`
-- `client.Main`
-- `client.Modules`
+## Controls
+
+- `Insert` toggles the overlay.
+- Hold `RightAlt` to activate Feature1 while held.
 
 ## Files
 
-- `Loader.lua` loads every module in order.
+- `Loader.lua` authorizes the local player and loads every module in order.
 - `Config.lua` stores shared settings and toggles.
 - `Connections.lua` owns connection registration and cleanup.
-- `PlayerCache.lua` tracks player lifecycle and cached character parts.
-- `Targeting.lua` exposes inert targeting hooks.
-- `Overlay.lua` exposes inert overlay hooks.
-- `Main.lua` wires services, input, cache refresh, and the render loop.
+- `PlayerCache.lua` creates and removes Drawing objects per player.
+- `Targeting.lua` owns target selection and camera assist logic.
+- `Overlay.lua` updates boxes, names, health bars, distances, tracers, and the range circle.
+- `Main.lua` wires services, input, player lifecycle, character lifecycle, and the render loop.
 
 ## Visibility
 
