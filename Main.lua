@@ -76,13 +76,25 @@ return function(context)
         end
     end
 
+    local function toggleOverlay()
+        Config.UI.Enabled = not Config.UI.Enabled
+
+        if not Config.UI.Enabled then
+            Overlay.hideAll()
+        end
+
+        if Gui and Gui.refresh then
+            Gui.refresh()
+        end
+
+        if Gui and Gui.saveConfig then
+            Gui.saveConfig()
+        end
+    end
+
     local function onInputBegan(input, gameProcessed)
         if matches(input, Config.Keys.HoldFeature1) then
             Config.Feature1.Active = true
-            return
-        end
-
-        if gameProcessed then
             return
         end
 
@@ -94,15 +106,12 @@ return function(context)
         end
 
         if matches(input, Config.Keys.ToggleUI) then
-            Config.UI.Enabled = not Config.UI.Enabled
+            toggleOverlay()
+            return
+        end
 
-            if not Config.UI.Enabled then
-                Overlay.hideAll()
-            end
-
-            if Gui and Gui.refresh then
-                Gui.refresh()
-            end
+        if gameProcessed then
+            return
         end
     end
 
