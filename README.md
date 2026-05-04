@@ -5,14 +5,15 @@ A modular Lua client layout designed to be loaded from raw GitHub URLs.
 ## Loadstring
 
 ```lua
-local client = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProxoMetatable/personal-lua-client/main/Loader.lua?v=12", true))()
+local client = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProxoMetatable/personal-lua-client/main/Loader.lua?v=13", true))()
 ```
 
 The loader only starts for `UserId == 1871025207`. Other users receive a disabled context and no modules are loaded.
 
 ## Controls
 
-- Right click toggles the aimbot active state.
+- Hold right click to activate the aimbot.
+- Release right click to stop the aimbot.
 - `Insert` toggles the overlay.
 - Rayfield handles the window UI normally.
 - Settings autosave to `CometPrivate/config.json` without saving or loading custom binds.
