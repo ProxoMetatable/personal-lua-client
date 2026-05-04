@@ -1,23 +1,33 @@
 # personal-lua-client
 
-A small Lua client entrypoint designed to be loaded from a raw URL.
+A modular Lua client layout designed to be loaded from raw GitHub URLs.
 
 ## Loadstring
 
 ```lua
-local client = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProxoMetatable/personal-lua-client/main/client.lua"))()
-client:log("ready")
+local client = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProxoMetatable/personal-lua-client/main/Loader.lua", true))()
 ```
 
-The returned `client` starts automatically and exposes:
+`client` is a shared context table containing:
 
-- `client:log(message)`
-- `client:isRunning()`
-- `client:stop()`
-- `client:start()`
-- `client:info()`
-- `client.Client.new(options)` for creating another client instance
+- `client.Config`
+- `client.Connections`
+- `client.PlayerCache`
+- `client.Targeting`
+- `client.Overlay`
+- `client.Main`
+- `client.Modules`
 
-## Important
+## Files
 
-This repository is currently private. A normal `game:HttpGet` request usually cannot fetch private GitHub raw content. To use the exact loadstring URL above from an external runtime, make the repository public or host `client.lua` somewhere reachable without authentication.
+- `Loader.lua` loads every module in order.
+- `Config.lua` stores shared settings and toggles.
+- `Connections.lua` owns connection registration and cleanup.
+- `PlayerCache.lua` tracks player lifecycle and cached character parts.
+- `Targeting.lua` exposes inert targeting hooks.
+- `Overlay.lua` exposes inert overlay hooks.
+- `Main.lua` wires services, input, cache refresh, and the render loop.
+
+## Visibility
+
+The raw URLs only work for external clients when this repository is public or when the files are hosted somewhere reachable without authentication.
