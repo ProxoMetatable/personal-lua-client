@@ -10,6 +10,7 @@ return function(context)
     local Targeting = context.Targeting
     local Overlay = context.Overlay
     local Gui = context.Gui
+    local renderStepName = "CometPrivateMain"
 
     local Main = {
         running = false
@@ -41,6 +42,38 @@ return function(context)
         end
 
         return false
+    end
+
+    local function mouseDown(bind)
+        local ok, result = pcall(function()
+            return UserInputService:IsMouseButtonPressed(bind)
+        end)
+
+        return ok and result
+    end
+
+    local function bindDown(bind)
+        local kind = bindType(bind)
+
+        if kind == "Enum.KeyCode" then
+            return UserInputService:IsKeyDown(bind)
+        end
+
+        if kind == "Enum.UserInputType" then
+            if bind == Enum.UserInputType.MouseButton1 or bind == Enum.UserInputType.MouseButton2 or bind == Enum.UserInputType.MouseButton3 then
+                return mouseDown(bind)
+            end
+        end
+
+        return false
+    end
+
+    local function syncAimHold()
+        if Config.Feature1.Enabled then
+            Config.Feature1.Active = bindDown(Config.Keys.HoldFeature1)
+        else
+            Config.Feature1.Active = false
+        end
     end
 
     local function onInputBegan(input, gameProcessed)
@@ -81,8 +114,31 @@ return function(context)
     end
 
     local function step()
+        syncAimHold()
         Overlay.updateAll()
         Targeting.update()
+    end
+
+    local function bindRenderStep()
+        pcall(function()
+            RunService:UnbindFromRenderStep(renderStepName)
+        end)
+
+        local bound = pcall(function()
+            RunService:BindToRenderStep(renderStepName, Enum.RenderPriority.Camera.Value + 1, step)
+        end)
+
+        if bound then
+            Connections.add("RenderStepped", {
+                Disconnect = function()
+                    pcall(function()
+                        RunService:UnbindFromRenderStep(renderStepName)
+                    end)
+                end
+            })
+        else
+            Connections.add("RenderStepped", RunService.RenderStepped:Connect(step))
+        end
     end
 
     function Main.start()
@@ -108,7 +164,7 @@ return function(context)
         Connections.add("CharacterAdded", LocalPlayer.CharacterAdded:Connect(function(character)
             context.LocalCharacter = character
         end))
-        Connections.add("RenderStepped", RunService.RenderStepped:Connect(step))
+        bindRenderStep()
 
         return Main
     end
