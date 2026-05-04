@@ -21,6 +21,7 @@ local order = {
     "PlayerCache.lua",
     "Targeting.lua",
     "Overlay.lua",
+    "GUI.lua",
     "Main.lua",
 }
 
