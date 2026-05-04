@@ -25,9 +25,18 @@ return function(context)
             Enabled = true
         },
         Keys = {
-            ToggleGUI = "RightShift",
-            ToggleUI = Enum.KeyCode.Insert,
-            HoldFeature1 = Enum.KeyCode.LeftAlt
+            ToggleGUI = {
+                Type = "KeyCode",
+                Name = "RightShift"
+            },
+            ToggleUI = {
+                Type = "KeyCode",
+                Name = "Insert"
+            },
+            HoldFeature1 = {
+                Type = "KeyCode",
+                Name = "LeftAlt"
+            }
         }
     }
 
