@@ -17,23 +17,45 @@ return function(context)
 
     context.LocalCharacter = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 
+    local function bindType(bind)
+        local ok, result = pcall(function()
+            return tostring(bind.EnumType)
+        end)
+
+        if ok then
+            return result
+        end
+
+        return nil
+    end
+
+    local function matches(input, bind)
+        local kind = bindType(bind)
+
+        if kind == "Enum.KeyCode" then
+            return input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == bind
+        end
+
+        if kind == "Enum.UserInputType" then
+            return input.UserInputType == bind
+        end
+
+        return false
+    end
+
     local function onInputBegan(input, gameProcessed)
         if gameProcessed then
             return
         end
 
-        if input.UserInputType ~= Enum.UserInputType.Keyboard then
-            return
-        end
-
-        if input.KeyCode == Config.Keys.ToggleGUI then
+        if matches(input, Config.Keys.ToggleGUI) then
             if Gui and Gui.toggleVisibility then
                 Gui.toggleVisibility()
             end
             return
         end
 
-        if input.KeyCode == Config.Keys.ToggleUI then
+        if matches(input, Config.Keys.ToggleUI) then
             Config.UI.Enabled = not Config.UI.Enabled
 
             if not Config.UI.Enabled then
@@ -47,17 +69,13 @@ return function(context)
             return
         end
 
-        if input.KeyCode == Config.Keys.HoldFeature1 then
+        if matches(input, Config.Keys.HoldFeature1) then
             Config.Feature1.Active = true
         end
     end
 
     local function onInputEnded(input)
-        if input.UserInputType ~= Enum.UserInputType.Keyboard then
-            return
-        end
-
-        if input.KeyCode == Config.Keys.HoldFeature1 then
+        if matches(input, Config.Keys.HoldFeature1) then
             Config.Feature1.Active = false
             Targeting.current = nil
         end
