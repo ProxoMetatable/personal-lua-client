@@ -15,12 +15,16 @@ The loader only starts for `UserId == 1871025207`. Other users receive a disable
 - `RightShift` opens and closes the Rayfield settings menu by default.
 - Hold `LeftAlt` to activate Feature1 by default.
 - `Insert` toggles the overlay by default.
-- Use the Rayfield menu to change Feature1, overlay styles, color, range, speed, target part, checks, and keybinds.
+- Bind fields support keyboard keys and mouse buttons.
+- Use `RightClick`, `RMB`, `MouseButton2`, or `M2` for right click.
+- Use `LeftClick`, `LMB`, `MouseButton1`, or `M1` for left click.
+- Use `MiddleClick`, `MMB`, `MouseButton3`, or `M3` for middle click.
 
 ## Files
 
 - `Loader.lua` authorizes the local player and loads every module in order.
 - `Config.lua` stores shared settings and toggles.
+- `Binds.lua` normalizes keyboard and mouse binds.
 - `Connections.lua` owns connection registration and cleanup.
 - `PlayerCache.lua` creates and removes Drawing objects per player.
 - `Targeting.lua` owns target selection and camera assist logic.
