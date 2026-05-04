@@ -1,0 +1,10 @@
+*.rbxlx.lock
+*.rbxl.lock
+*.tmp
+*.log
+.vscode/
+.idea/
+node_modules/
+out/
+dist/
+build/
