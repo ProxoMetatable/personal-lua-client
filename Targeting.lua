@@ -14,28 +14,57 @@ return function(context)
         return context.LocalCharacter or LocalPlayer.Character
     end
 
+    local function getTargetPart(character)
+        if not character then
+            return nil
+        end
+
+        return character:FindFirstChild(Config.Feature1.Part)
+            or character:FindFirstChild("Head")
+            or character:FindFirstChild("UpperTorso")
+            or character:FindFirstChild("Torso")
+            or character:FindFirstChild("HumanoidRootPart")
+    end
+
+    local function getRoot(character)
+        if not character then
+            return nil
+        end
+
+        return character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart or getTargetPart(character)
+    end
+
     local function wallCheck(character, part)
         local localCharacter = getLocalCharacter()
 
         if not localCharacter then
-            return false
+            return true
         end
 
         local origin = Camera.CFrame.Position
         local direction = part.Position - origin
-        local ray = Ray.new(origin, direction)
-        local hit = Workspace:FindPartOnRayWithIgnoreList(ray, {
+        local params = RaycastParams.new()
+
+        local filterOk = pcall(function()
+            params.FilterType = Enum.RaycastFilterType.Exclude
+        end)
+
+        if not filterOk then
+            params.FilterType = Enum.RaycastFilterType.Blacklist
+        end
+
+        params.FilterDescendantsInstances = {
             localCharacter,
             character
-        })
+        }
 
-        return hit == nil
+        return Workspace:Raycast(origin, direction, params) == nil
     end
 
     local function considerCharacter(best, character, player)
         local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-        local root = character and character:FindFirstChild("HumanoidRootPart")
-        local part = character and character:FindFirstChild(Config.Feature1.Part)
+        local root = getRoot(character)
+        local part = getTargetPart(character)
 
         if not humanoid or humanoid.Health <= 0 or not root or not part then
             return best
@@ -45,7 +74,7 @@ return function(context)
             return best
         end
 
-        local pos, visible = Camera:WorldToViewportPoint(root.Position)
+        local pos, visible = Camera:WorldToViewportPoint(part.Position)
 
         if not visible then
             return best
@@ -66,6 +95,7 @@ return function(context)
         return {
             Character = character,
             Part = part,
+            Root = root,
             Player = player,
             Distance = dist
         }
@@ -86,7 +116,7 @@ return function(context)
 
         for _, descendant in ipairs(Workspace:GetDescendants()) do
             if descendant:IsA("Model") and descendant ~= localCharacter and not Players:GetPlayerFromCharacter(descendant) then
-                if descendant:FindFirstChildOfClass("Humanoid") and descendant:FindFirstChild("HumanoidRootPart") then
+                if descendant:FindFirstChildOfClass("Humanoid") then
                     best = considerCharacter(best, descendant, nil)
                 end
             end
@@ -101,6 +131,7 @@ return function(context)
         local best = {
             Character = nil,
             Part = nil,
+            Root = nil,
             Player = nil,
             Distance = Config.Feature1.Range
         }
@@ -128,13 +159,14 @@ return function(context)
         local target = Targeting.findTarget()
 
         if target and target.Part then
-            local current = Camera.CFrame.LookVector
-            local targetDir = (target.Part.Position - Camera.CFrame.Position).Unit
+            local delta = target.Part.Position - Camera.CFrame.Position
 
-            Camera.CFrame = CFrame.new(
-                Camera.CFrame.Position,
-                Camera.CFrame.Position + current:Lerp(targetDir, 1 / Config.Feature1.Speed)
-            )
+            if delta.Magnitude > 0 then
+                local alpha = math.clamp(1 / math.max(Config.Feature1.Speed, 1), 0, 1)
+                local goal = CFrame.new(Camera.CFrame.Position, target.Part.Position)
+
+                Camera.CFrame = Camera.CFrame:Lerp(goal, alpha)
+            end
         end
 
         return target
