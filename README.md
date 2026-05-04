@@ -5,7 +5,7 @@ A modular Lua client layout designed to be loaded from raw GitHub URLs.
 ## Loadstring
 
 ```lua
-local client = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProxoMetatable/personal-lua-client/main/Loader.lua?v=8", true))()
+local client = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProxoMetatable/personal-lua-client/main/Loader.lua?v=9", true))()
 ```
 
 The loader only starts for `UserId == 1871025207`. Other users receive a disabled context and no modules are loaded.
@@ -27,7 +27,7 @@ The loader only starts for `UserId == 1871025207`. Other users receive a disable
 - `Targeting.lua` owns target selection for players and NPC-style workspace models.
 - `Overlay.lua` updates boxes, names, health bars, distances, tracers, and the range circle.
 - `GUI.lua` builds the Rayfield customization menu.
-- `Main.lua` wires services, input, GUI lifecycle, player lifecycle, character lifecycle, and the render loop.
+- `Main.lua` wires services, input, GUI lifecycle, player lifecycle, character lifecycle, and the render loop after Roblox camera updates.
 
 ## Visibility
 
