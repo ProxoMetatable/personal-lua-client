@@ -15,6 +15,8 @@ return function(context)
         blockUntil = 0
     }
 
+    local rowOrder = 0
+
     local function connect(signal, callback)
         local connection = signal:Connect(callback)
         table.insert(Gui.connections, connection)
@@ -73,8 +75,11 @@ return function(context)
     end
 
     local function createRow(parent, height)
+        rowOrder = rowOrder + 1
+
         return make("Frame", {
             BackgroundTransparency = 1,
+            LayoutOrder = rowOrder,
             Size = UDim2.new(1, 0, 0, height or 32)
         }, parent)
     end
@@ -308,6 +313,8 @@ return function(context)
     end
 
     local function build()
+        rowOrder = 0
+
         local parent = LocalPlayer:WaitForChild("PlayerGui")
         local old = parent:FindFirstChild("PersonalLuaClientGui")
 
@@ -342,6 +349,7 @@ return function(context)
         }, screen)
 
         local title = make("TextLabel", {
+            Active = true,
             BackgroundColor3 = Color3.fromRGB(32, 36, 45),
             BorderSizePixel = 0,
             Size = UDim2.new(1, 0, 0, 38),
