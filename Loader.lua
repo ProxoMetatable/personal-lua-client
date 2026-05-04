@@ -17,6 +17,7 @@ end
 
 local order = {
     "Config.lua",
+    "Binds.lua",
     "Connections.lua",
     "PlayerCache.lua",
     "Targeting.lua",
