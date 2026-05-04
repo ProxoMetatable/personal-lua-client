@@ -12,82 +12,6 @@ return function(context)
     local saveFolder = "CometPrivate"
     local saveFile = saveFolder .. "/config.json"
 
-    local bindOptions = {
-        "RightClick",
-        "LeftClick",
-        "MiddleClick",
-        "LeftAlt",
-        "RightAlt",
-        "RightShift",
-        "LeftShift",
-        "Insert",
-        "Q",
-        "E",
-        "F",
-        "C",
-        "X",
-        "Z",
-        "V"
-    }
-
-    local bindMap = {
-        RightClick = Enum.UserInputType.MouseButton2,
-        LeftClick = Enum.UserInputType.MouseButton1,
-        MiddleClick = Enum.UserInputType.MouseButton3,
-        LeftAlt = Enum.KeyCode.LeftAlt,
-        RightAlt = Enum.KeyCode.RightAlt,
-        RightShift = Enum.KeyCode.RightShift,
-        LeftShift = Enum.KeyCode.LeftShift,
-        Insert = Enum.KeyCode.Insert,
-        Q = Enum.KeyCode.Q,
-        E = Enum.KeyCode.E,
-        F = Enum.KeyCode.F,
-        C = Enum.KeyCode.C,
-        X = Enum.KeyCode.X,
-        Z = Enum.KeyCode.Z,
-        V = Enum.KeyCode.V
-    }
-
-    local bindDefaults = {
-        HoldFeature1 = "RightClick",
-        ToggleUI = "Insert",
-        ToggleGUI = "RightShift"
-    }
-
-    local bindNames = {}
-
-    for name, value in pairs(bindMap) do
-        bindNames[value] = name
-    end
-
-    local function bindName(value, fallback)
-        return bindNames[value] or fallback or "RightShift"
-    end
-
-    local function selected(option)
-        if type(option) == "table" then
-            if type(option[1]) == "string" then
-                return option[1]
-            end
-
-            for key, value in pairs(option) do
-                if value == true and type(key) == "string" then
-                    return key
-                end
-
-                if type(value) == "string" then
-                    return value
-                end
-            end
-        end
-
-        if type(option) == "string" then
-            return option
-        end
-
-        return nil
-    end
-
     local function fileApiReady()
         return typeof(writefile) == "function" and typeof(readfile) == "function" and typeof(isfile) == "function"
     end
@@ -122,7 +46,7 @@ return function(context)
 
     local function snapshot()
         return {
-            Version = 1,
+            Version = 2,
             Feature1 = {
                 Enabled = Config.Feature1.Enabled,
                 Range = Config.Feature1.Range,
@@ -145,11 +69,6 @@ return function(context)
             },
             GUI = {
                 Enabled = Config.GUI.Enabled
-            },
-            Keys = {
-                HoldFeature1 = bindName(Config.Keys.HoldFeature1, bindDefaults.HoldFeature1),
-                ToggleUI = bindName(Config.Keys.ToggleUI, bindDefaults.ToggleUI),
-                ToggleGUI = bindName(Config.Keys.ToggleGUI, bindDefaults.ToggleGUI)
             }
         }
     end
@@ -243,16 +162,6 @@ return function(context)
             Config.GUI.Enabled = data.GUI.Enabled
         end
 
-        if type(data.Keys) == "table" then
-            for keyName in pairs(bindDefaults) do
-                local bind = bindMap[data.Keys[keyName]]
-
-                if bind then
-                    Config.Keys[keyName] = bind
-                end
-            end
-        end
-
         Config.Feature1.Active = false
     end
 
@@ -290,16 +199,6 @@ return function(context)
         return false
     end
 
-    local function setBind(keyName, option)
-        local name = selected(option)
-        local bind = bindMap[name]
-
-        if bind then
-            Config.Keys[keyName] = bind
-            saveConfig()
-        end
-    end
-
     local function hideOverlay()
         if context.Overlay and context.Overlay.hideAll then
             context.Overlay.hideAll()
@@ -314,39 +213,12 @@ return function(context)
         end
     end
 
-    function Gui.shouldBlockInput()
-        return false
-    end
-
-    function Gui.toggleVisibility()
-        if not Gui.Rayfield then
-            return
-        end
-
-        pcall(function()
-            Gui.Rayfield:SetVisibility(not Gui.Rayfield:IsVisible())
-        end)
-    end
-
     function Gui.saveConfig()
         return saveConfig()
     end
 
     function Gui.loadConfig()
         return loadConfig()
-    end
-
-    local function addBindDropdown(tab, label, keyName)
-        tab:CreateDropdown({
-            Name = label,
-            Options = bindOptions,
-            CurrentOption = {bindName(Config.Keys[keyName], bindDefaults[keyName])},
-            MultipleOptions = false,
-            Flag = keyName .. "BindDropdown",
-            Callback = function(option)
-                setBind(keyName, option)
-            end
-        })
     end
 
     local function createInterface()
@@ -397,8 +269,6 @@ return function(context)
                 saveConfig()
             end
         })
-
-        addBindDropdown(AimTab, "Aim Hold Bind", "HoldFeature1")
 
         AimTab:CreateSlider({
             Name = "Range",
@@ -476,8 +346,6 @@ return function(context)
             end
         })
 
-        addBindDropdown(OverlayTab, "Overlay Toggle Bind", "ToggleUI")
-
         OverlayTab:CreateSection("Elements")
         OverlayTab:CreateToggle({
             Name = "Boxes",
@@ -550,8 +418,6 @@ return function(context)
         })
 
         SettingsTab:CreateSection("Interface")
-        addBindDropdown(SettingsTab, "Menu Toggle Bind", "ToggleGUI")
-
         SettingsTab:CreateButton({
             Name = "Save Settings",
             Callback = function()
