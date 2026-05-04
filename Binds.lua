@@ -2,18 +2,18 @@ return function(context)
     local Binds = {}
 
     local aliases = {
-        LMB = "MouseButton1",
-        M1 = "MouseButton1",
-        LeftClick = "MouseButton1",
-        LeftMouse = "MouseButton1",
-        RMB = "MouseButton2",
-        M2 = "MouseButton2",
-        RightClick = "MouseButton2",
-        RightMouse = "MouseButton2",
-        MMB = "MouseButton3",
-        M3 = "MouseButton3",
-        MiddleClick = "MouseButton3",
-        MiddleMouse = "MouseButton3"
+        lmb = "MouseButton1",
+        m1 = "MouseButton1",
+        leftclick = "MouseButton1",
+        leftmouse = "MouseButton1",
+        rmb = "MouseButton2",
+        m2 = "MouseButton2",
+        rightclick = "MouseButton2",
+        rightmouse = "MouseButton2",
+        mmb = "MouseButton3",
+        m3 = "MouseButton3",
+        middleclick = "MouseButton3",
+        middlemouse = "MouseButton3"
     }
 
     local friendly = {
@@ -21,6 +21,17 @@ return function(context)
         MouseButton2 = "RightClick",
         MouseButton3 = "MiddleClick"
     }
+
+    local keyCodes = {}
+    local inputTypes = {}
+
+    for _, item in ipairs(Enum.KeyCode:GetEnumItems()) do
+        keyCodes[item.Name:lower()] = item
+    end
+
+    for _, item in ipairs(Enum.UserInputType:GetEnumItems()) do
+        inputTypes[item.Name:lower()] = item
+    end
 
     local function enumTypeName(value)
         local ok, result = pcall(function()
@@ -32,6 +43,10 @@ return function(context)
         end
 
         return nil
+    end
+
+    local function compact(value)
+        return tostring(value):gsub("%s+", "")
     end
 
     function Binds.from(value)
@@ -61,19 +76,24 @@ return function(context)
         end
 
         if type(value) == "string" then
-            local name = aliases[value] or value
+            local raw = compact(value)
+            local lowered = raw:lower()
+            local name = aliases[lowered] or raw
+            local lookup = name:lower()
+            local inputType = inputTypes[lookup]
+            local keyCode = keyCodes[lookup]
 
-            if Enum.UserInputType[name] then
+            if inputType then
                 return {
                     Type = "UserInputType",
-                    Name = name
+                    Name = inputType.Name
                 }
             end
 
-            if Enum.KeyCode[name] then
+            if keyCode then
                 return {
                     Type = "KeyCode",
-                    Name = name
+                    Name = keyCode.Name
                 }
             end
         end
