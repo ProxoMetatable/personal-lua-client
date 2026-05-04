@@ -114,14 +114,14 @@ return function(context)
 
     local function createInterface()
         local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
-        local clientName = Config.Name or "Comet - Private"
+        local uiTitle = "Comet"
 
         local Window = Rayfield:CreateWindow({
-            Name = clientName,
+            Name = uiTitle,
             Icon = 0,
-            LoadingTitle = clientName,
+            LoadingTitle = uiTitle,
             LoadingSubtitle = "private client",
-            ShowText = clientName,
+            ShowText = uiTitle,
             Theme = "Default",
             DisableRayfieldPrompts = true,
             DisableBuildWarnings = true,
