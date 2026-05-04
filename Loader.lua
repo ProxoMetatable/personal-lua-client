@@ -21,7 +21,8 @@ end
 local function run(path)
     local source = fetch(path)
     local chunk = loadstring(source)
-    local result = chunk(context)
+    local factory = chunk()
+    local result = factory(context)
     context.Modules[path:gsub("%.lua$", "")] = result
     return result
 end
