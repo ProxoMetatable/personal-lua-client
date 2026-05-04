@@ -22,7 +22,7 @@ return function(context)
             return
         end
 
-        if Gui and Gui.shouldBlockInput and Gui.shouldBlockInput() then
+        if Gui and Gui.usesOwnKeybinds then
             return
         end
 
@@ -32,10 +32,6 @@ return function(context)
             if not Config.UI.Enabled then
                 Overlay.hideAll()
             end
-
-            if Gui and Gui.refresh then
-                Gui.refresh()
-            end
         end
 
         if input.KeyCode == Config.Keys.HoldFeature1 then
@@ -44,6 +40,10 @@ return function(context)
     end
 
     local function onInputEnded(input)
+        if Gui and Gui.usesOwnKeybinds then
+            return
+        end
+
         if input.KeyCode == Config.Keys.HoldFeature1 then
             Config.Feature1.Active = false
             Targeting.current = nil
