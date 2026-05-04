@@ -22,10 +22,10 @@ return function(context)
             Enabled = true
         },
         GUI = {
-            Enabled = true,
-            Visible = true
+            Enabled = true
         },
         Keys = {
+            ToggleGUI = "RightShift",
             ToggleUI = Enum.KeyCode.Insert,
             HoldFeature1 = Enum.KeyCode.LeftAlt
         }
