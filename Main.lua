@@ -24,13 +24,20 @@ return function(context)
         end
     end
 
-    local function toggleAim()
-        if not Config.Feature1.Enabled then
-            Config.Feature1.Active = false
-            return
-        end
+    local function rightClickDown()
+        local ok, result = pcall(function()
+            return UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+        end)
 
-        Config.Feature1.Active = not Config.Feature1.Active
+        return ok and result
+    end
+
+    local function syncAimHold()
+        if Config.Feature1.Enabled then
+            Config.Feature1.Active = rightClickDown()
+        else
+            Config.Feature1.Active = false
+        end
 
         if not Config.Feature1.Active then
             Targeting.current = nil
@@ -52,17 +59,20 @@ return function(context)
     end
 
     local function onInputBegan(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton2 then
-            toggleAim()
-            return
-        end
-
         if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.Insert then
             toggleOverlay()
         end
     end
 
+    local function onInputEnded(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton2 then
+            Config.Feature1.Active = false
+            Targeting.current = nil
+        end
+    end
+
     local function step()
+        syncAimHold()
         Overlay.updateAll()
         Targeting.update()
     end
@@ -102,6 +112,7 @@ return function(context)
         end
 
         Connections.add("InputBegan", UserInputService.InputBegan:Connect(onInputBegan))
+        Connections.add("InputEnded", UserInputService.InputEnded:Connect(onInputEnded))
         Connections.add("PlayerAdded", Players.PlayerAdded:Connect(function(player)
             PlayerCache.setup(player)
         end))
