@@ -1,5 +1,6 @@
 return function(context)
     local Config = {
+        Name = "Comet - Private",
         Feature1 = {
             Enabled = true,
             Active = false,
