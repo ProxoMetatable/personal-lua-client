@@ -44,6 +44,11 @@ return function(context)
     end
 
     local function onInputBegan(input, gameProcessed)
+        if matches(input, Config.Keys.HoldFeature1) then
+            Config.Feature1.Active = true
+            return
+        end
+
         if gameProcessed then
             return
         end
@@ -65,12 +70,6 @@ return function(context)
             if Gui and Gui.refresh then
                 Gui.refresh()
             end
-
-            return
-        end
-
-        if matches(input, Config.Keys.HoldFeature1) then
-            Config.Feature1.Active = true
         end
     end
 
