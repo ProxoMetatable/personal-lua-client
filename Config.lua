@@ -1,35 +1,30 @@
 return function(context)
     local Config = {
-        Name = "personal-lua-client",
-        Version = "0.2.0",
-        Enabled = true,
-        Keys = {
-            ToggleOverlay = Enum.KeyCode.Insert,
-            HoldTargeting = Enum.KeyCode.RightAlt,
-        },
-        Targeting = {
-            Enabled = false,
+        Feature1 = {
+            Enabled = true,
             Active = false,
-            WallCheck = true,
-            TeamCheck = true,
-            MaxDistance = 1000,
-            FieldOfView = 120,
+            Range = 150,
+            Speed = 8,
+            Part = "Head",
+            Check1 = true,
+            Check2 = true
         },
-        Overlay = {
-            Enabled = false,
-            Boxes = true,
-            Names = true,
-            Distance = true,
-            HealthBars = true,
-            Tracers = false,
-            TeamColors = true,
-            FriendlyColor = Color3.fromRGB(80, 180, 255),
-            EnemyColor = Color3.fromRGB(255, 85, 85),
-            NeutralColor = Color3.fromRGB(235, 235, 235),
+        Feature2 = {
+            Style1 = true,
+            Style2 = true,
+            Style3 = true,
+            Style4 = true,
+            Style5 = true,
+            MainColor = Color3.fromRGB(255, 0, 0),
+            UseTeam = true
         },
-        Cache = {
-            RefreshRate = 0.25,
+        UI = {
+            Enabled = true
         },
+        Keys = {
+            ToggleUI = Enum.KeyCode.Insert,
+            HoldFeature1 = Enum.KeyCode.RightAlt
+        }
     }
 
     context.Config = Config
