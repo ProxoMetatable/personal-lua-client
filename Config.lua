@@ -21,9 +21,13 @@ return function(context)
         UI = {
             Enabled = true
         },
+        GUI = {
+            Enabled = true,
+            Visible = true
+        },
         Keys = {
             ToggleUI = Enum.KeyCode.Insert,
-            HoldFeature1 = Enum.KeyCode.RightAlt
+            HoldFeature1 = Enum.KeyCode.LeftAlt
         }
     }
 
