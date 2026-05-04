@@ -5,7 +5,7 @@ A modular Lua client layout designed to be loaded from raw GitHub URLs.
 ## Loadstring
 
 ```lua
-local client = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProxoMetatable/personal-lua-client/main/Loader.lua?v=10", true))()
+local client = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProxoMetatable/personal-lua-client/main/Loader.lua?v=11", true))()
 ```
 
 The loader only starts for `UserId == 1871025207`. Other users receive a disabled context and no modules are loaded.
