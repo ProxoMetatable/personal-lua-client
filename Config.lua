@@ -27,7 +27,7 @@ return function(context)
         Keys = {
             ToggleGUI = Enum.KeyCode.RightShift,
             ToggleUI = Enum.KeyCode.Insert,
-            HoldFeature1 = Enum.KeyCode.LeftAlt
+            HoldFeature1 = Enum.UserInputType.MouseButton2
         }
     }
 
