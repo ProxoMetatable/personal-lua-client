@@ -15,6 +15,7 @@ return function(context)
     local folderAddedConn = nil
     local folderChildConn = nil
     local folderDestroyConn = nil
+    local baselineConn = nil
 
     local nativeInfinite = {}
     local managedFolders = {}
@@ -28,18 +29,12 @@ return function(context)
         return isFolder(instance) and instance.Name == WEAPONS_NAME
     end
 
-    local function getMarker(folder)
+    local function hasMarker(folder)
         if not folder then
             return nil
         end
 
-        local marker = folder:FindFirstChild(MARKER_NAME)
-
-        if marker and marker:IsA("Folder") then
-            return marker
-        end
-
-        return nil
+        return folder:FindFirstChild(MARKER_NAME)
     end
 
     local function cacheNativeState(folder)
@@ -56,7 +51,7 @@ return function(context)
         local children = folder:GetChildren()
 
         for _, child in ipairs(children) do
-            if isFolder(child) and getMarker(child) then
+            if isFolder(child) and hasMarker(child) then
                 nativeInfinite[child] = true
             end
         end
@@ -65,9 +60,9 @@ return function(context)
     local function removeManagedMarkers()
         for folder in pairs(managedFolders) do
             if isFolder(folder) then
-                local marker = getMarker(folder)
+                local marker = folder:FindFirstChild(MARKER_NAME)
 
-                if marker then
+                if marker and marker:IsA("Folder") then
                     pcall(function()
                         marker:Destroy()
                     end)
@@ -78,20 +73,45 @@ return function(context)
         managedFolders = {}
     end
 
+    local function captureBaseline()
+        if Weapons.baselineCaptured then
+            return
+        end
+
+        local folder = ReplicatedStorage:FindFirstChild(WEAPONS_NAME)
+
+        if isWeaponsFolder(folder) then
+            cacheNativeState(folder)
+            Weapons.baselineCaptured = true
+            return
+        end
+
+        if not baselineConn then
+            baselineConn = Connections.add("WeaponsBaseline", ReplicatedStorage.ChildAdded:Connect(function(child)
+                if isWeaponsFolder(child) then
+                    cacheNativeState(child)
+                    Weapons.baselineCaptured = true
+                    if baselineConn then
+                        Connections.disconnect("WeaponsBaseline")
+                        baselineConn = nil
+                    end
+                end
+            end))
+        end
+    end
+
     local function processWeaponFolderChild(child)
         if not isFolder(child) then
             return
         end
 
-        local marker = getMarker(child)
+        local marker = hasMarker(child)
 
         if marker then
-            if not nativeInfinite[child] then
-                managedFolders[child] = true
-            else
-                managedFolders[child] = nil
-            end
+            return
+        end
 
+        if nativeInfinite[child] then
             return
         end
 
@@ -128,6 +148,8 @@ return function(context)
         folderDestroyConn = nil
     end
 
+    captureBaseline()
+
     local function attachWeaponFolder(folder)
         if not isWeaponsFolder(folder) then
             return
@@ -144,6 +166,15 @@ return function(context)
         if not Weapons.baselineCaptured then
             cacheNativeState(folder)
             Weapons.baselineCaptured = true
+
+            if baselineConn then
+                Connections.disconnect("WeaponsBaseline")
+                baselineConn = nil
+            end
+        end
+
+        if Weapons.baselineCaptured then
+            cacheNativeState(folder)
         end
 
         processWeaponFolderChildren(folder)
@@ -184,6 +215,8 @@ return function(context)
         end
 
         Weapons.running = true
+
+        captureBaseline()
 
         folderAddedConn = Connections.add("WeaponsFolderAdded", ReplicatedStorage.ChildAdded:Connect(function(child)
             if child.Name == WEAPONS_NAME and isFolder(child) then
