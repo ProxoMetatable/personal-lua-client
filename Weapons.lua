@@ -110,16 +110,16 @@ return function(context)
 
         Weapons.running = true
 
+        folderAddedConn = Connections.add("WeaponsFolderAdded", ReplicatedStorage.ChildAdded:Connect(function(child)
+            if child.Name == WEAPONS_NAME and child:IsA("Folder") then
+                attachWeaponFolder(child)
+            end
+        end))
+
         local weaponsFolder = ReplicatedStorage:FindFirstChild(WEAPONS_NAME)
 
-        if weaponsFolder then
+        if weaponsFolder and validWeaponsFolder(weaponsFolder) then
             attachWeaponFolder(weaponsFolder)
-        else
-            folderAddedConn = Connections.add("WeaponsFolderAdded", ReplicatedStorage.ChildAdded:Connect(function(child)
-                if child.Name == WEAPONS_NAME and child:IsA("Folder") then
-                    attachWeaponFolder(child)
-                end
-            end))
         end
 
         return Weapons
