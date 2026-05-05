@@ -19,7 +19,16 @@ return function(context)
     circle.Filled = false
     circle.Visible = false
 
+    local versionText = Drawing.new("Text")
+    versionText.Size = 14
+    versionText.Center = false
+    versionText.Outline = true
+    versionText.Font = 2
+    versionText.Transparency = 1
+    versionText.Visible = true
+
     table.insert(Overlay.drawings, circle)
+    table.insert(Overlay.drawings, versionText)
 
     local function setVisible(obj, visible)
         if typeof(obj) == "table" then
@@ -31,6 +40,33 @@ return function(context)
                 obj.Visible = visible
             end)
         end
+    end
+
+    local function updateVersionBadge()
+        Camera = Workspace.CurrentCamera
+
+        local version = Config.Version or {}
+        local status = version.Status or "Checking"
+        local number = version.Number or "0.0.0"
+
+        versionText.Text = "Comet - " .. number .. " - " .. status
+
+        if status == "Latest" then
+            versionText.Color = Color3.fromRGB(90, 255, 120)
+        elseif status == "Old" then
+            versionText.Color = Color3.fromRGB(255, 90, 90)
+        else
+            versionText.Color = Color3.fromRGB(255, 255, 255)
+        end
+
+        local width = 160
+
+        pcall(function()
+            width = versionText.TextBounds.X
+        end)
+
+        versionText.Position = Vector2.new(Camera.ViewportSize.X - width - 12, 10)
+        versionText.Visible = true
     end
 
     function Overlay.setVisible(obj, visible)
@@ -47,6 +83,8 @@ return function(context)
         for _, data in pairs(context.PlayerCache.players) do
             Overlay.hidePlayer(data)
         end
+
+        updateVersionBadge()
     end
 
     function Overlay.updateCircle()
@@ -176,6 +214,7 @@ return function(context)
 
     function Overlay.updateAll()
         Overlay.updateCircle()
+        updateVersionBadge()
 
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer then
