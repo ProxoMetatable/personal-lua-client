@@ -46,14 +46,16 @@ return function(context)
 
     local function snapshot()
         return {
-            Version = 2,
+            Version = 3,
             Feature1 = {
                 Enabled = Config.Feature1.Enabled,
                 Range = Config.Feature1.Range,
                 Speed = Config.Feature1.Speed,
                 Part = Config.Feature1.Part,
                 Check1 = Config.Feature1.Check1,
-                Check2 = Config.Feature1.Check2
+                Check2 = Config.Feature1.Check2,
+                ScanInterval = Config.Feature1.ScanInterval,
+                MaxTargets = Config.Feature1.MaxTargets
             },
             Feature2 = {
                 Style1 = Config.Feature2.Style1,
@@ -117,6 +119,14 @@ return function(context)
 
             if type(feature1.Check2) == "boolean" then
                 Config.Feature1.Check2 = feature1.Check2
+            end
+
+            if type(feature1.ScanInterval) == "number" then
+                Config.Feature1.ScanInterval = math.clamp(feature1.ScanInterval, 0.02, 0.25)
+            end
+
+            if type(feature1.MaxTargets) == "number" then
+                Config.Feature1.MaxTargets = math.clamp(math.floor(feature1.MaxTargets), 8, 256)
             end
         end
 
@@ -326,6 +336,33 @@ return function(context)
             Flag = "Feature1TeamCheck",
             Callback = function(value)
                 Config.Feature1.Check2 = value
+                saveConfig()
+            end
+        })
+
+        AimTab:CreateSection("Performance")
+        AimTab:CreateSlider({
+            Name = "Scan Rate",
+            Range = {4, 50},
+            Increment = 1,
+            Suffix = "hz",
+            CurrentValue = math.floor(1 / math.max(Config.Feature1.ScanInterval, 0.02) + 0.5),
+            Flag = "Feature1ScanRate",
+            Callback = function(value)
+                Config.Feature1.ScanInterval = 1 / math.clamp(value, 4, 50)
+                saveConfig()
+            end
+        })
+
+        AimTab:CreateSlider({
+            Name = "Max Cached Targets",
+            Range = {8, 256},
+            Increment = 1,
+            Suffix = "models",
+            CurrentValue = Config.Feature1.MaxTargets,
+            Flag = "Feature1MaxTargets",
+            Callback = function(value)
+                Config.Feature1.MaxTargets = math.floor(value)
                 saveConfig()
             end
         })
