@@ -23,6 +23,7 @@ local order = {
     "Targeting.lua",
     "Overlay.lua",
     "GUI.lua",
+    "VersionCheck.lua",
     "Main.lua",
 }
 
