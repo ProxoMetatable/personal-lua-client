@@ -11,6 +11,7 @@ return function(context)
     local Overlay = context.Overlay
     local Gui = context.Gui
     local VersionCheck = context.VersionCheck
+    local Weapons = context.Weapons
     local renderStepName = "CometPrivateMain"
 
     local Main = {
@@ -112,6 +113,12 @@ return function(context)
             Targeting.start()
         end
 
+        if Weapons and Weapons.start and Config.Feature3 and Config.Feature3.InfiniteAmmo then
+            Weapons.start()
+        elseif Weapons and Weapons.setEnabled and Config.Feature3 then
+            Weapons.setEnabled(false)
+        end
+
         if Gui and Gui.start then
             Gui.start()
         end
@@ -153,6 +160,10 @@ return function(context)
 
         if Targeting and Targeting.stop then
             Targeting.stop()
+        end
+
+        if Weapons and Weapons.stop then
+            Weapons.stop()
         end
 
         Overlay.hideAll()
