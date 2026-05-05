@@ -21,6 +21,7 @@ local order = {
     "Connections.lua",
     "PlayerCache.lua",
     "Targeting.lua",
+    "Weapons.lua",
     "Overlay.lua",
     "GUI.lua",
     "VersionCheck.lua",
