@@ -40,7 +40,7 @@ return function(context)
 
         local r = math.clamp(tonumber(value.R) or 255, 0, 255)
         local g = math.clamp(tonumber(value.G) or 0, 0, 255)
-        local b = math.clamp(tonumber(value.B) or 0, 255)
+        local b = math.clamp(tonumber(value.B) or 0, 0, 255)
 
         return Color3.fromRGB(r, g, b)
     end
@@ -54,7 +54,7 @@ return function(context)
                 Speed = Config.Feature1.Speed,
                 Part = Config.Feature1.Part,
                 Check1 = Config.Feature1.Check1,
-                Check2 = Config.Feature1.Check2,
+                Check2 = Config.Feature2.Check2,
                 ScanInterval = Config.Feature1.ScanInterval,
                 MaxTargets = Config.Feature1.MaxTargets
             },
