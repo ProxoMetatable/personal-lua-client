@@ -47,7 +47,7 @@ return function(context)
 
     local function snapshot()
         return {
-            Version = 4,
+            Version = 5,
             Feature1 = {
                 Enabled = Config.Feature1.Enabled,
                 Range = Config.Feature1.Range,
@@ -69,7 +69,9 @@ return function(context)
             },
             Feature3 = {
                 InfiniteAmmo = Config.Feature3.InfiniteAmmo,
-                ProjectileTravel = Config.Feature3.ProjectileTravel
+                ProjectileTravel = Config.Feature3.ProjectileTravel,
+                NoSpread = Config.Feature3.NoSpread,
+                NoRecoilControl = Config.Feature3.NoRecoilControl
             },
             UI = {
                 Enabled = Config.UI.Enabled
@@ -177,6 +179,14 @@ return function(context)
 
         if type(feature3) == "table" and type(feature3.ProjectileTravel) == "boolean" then
             Config.Feature3.ProjectileTravel = feature3.ProjectileTravel
+        end
+
+        if type(feature3) == "table" and type(feature3.NoSpread) == "boolean" then
+            Config.Feature3.NoSpread = feature3.NoSpread
+        end
+
+        if type(feature3) == "table" and type(feature3.NoRecoilControl) == "boolean" then
+            Config.Feature3.NoRecoilControl = feature3.NoRecoilControl
         end
 
         if type(data.UI) == "table" and type(data.UI.Enabled) == "boolean" then
@@ -494,6 +504,34 @@ return function(context)
 
                 if Weapons and Weapons.setEnabled then
                     Weapons.setEnabled("ProjectileTravel", value)
+                end
+
+                saveConfig()
+            end
+        })
+        WeaponsTab:CreateToggle({
+            Name = "No Spread",
+            CurrentValue = Config.Feature3.NoSpread,
+            Flag = "NoSpread",
+            Callback = function(value)
+                Config.Feature3.NoSpread = value
+
+                if Weapons and Weapons.setEnabled then
+                    Weapons.setEnabled("NoSpread", value)
+                end
+
+                saveConfig()
+            end
+        })
+        WeaponsTab:CreateToggle({
+            Name = "No Recoil",
+            CurrentValue = Config.Feature3.NoRecoilControl,
+            Flag = "NoRecoilControl",
+            Callback = function(value)
+                Config.Feature3.NoRecoilControl = value
+
+                if Weapons and Weapons.setEnabled then
+                    Weapons.setEnabled("NoRecoilControl", value)
                 end
 
                 saveConfig()
