@@ -24,6 +24,12 @@ The loader only starts for `UserId == 1871025207`. Other users receive a disable
 - Rayfield handles the window UI normally.
 - Settings autosave to `CometPrivate/config.json` without saving or loading custom binds.
 
+## Target Safety
+
+- Locked targets are revalidated before camera movement.
+- Dead humanoids, dead humanoid states, off-FOV targets, underground parts, and targets too far above/below the local character are dropped instantly.
+- `MaxVerticalDelta` and `FloorBuffer` in `Config.lua` prevent down-map death models from causing obvious camera flicks.
+
 ## Performance
 
 - NPC-style workspace models are cached instead of discovered with `Workspace:GetDescendants()` every frame.
