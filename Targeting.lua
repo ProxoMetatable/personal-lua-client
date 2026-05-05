@@ -51,12 +51,66 @@ return function(context)
         return character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart or getTargetPart(character)
     end
 
+    local function getLocalRoot()
+        return getRoot(getLocalCharacter())
+    end
+
+    local function humanoidAlive(humanoid)
+        if not humanoid or humanoid.Health <= 0 then
+            return false
+        end
+
+        local ok, state = pcall(function()
+            return humanoid:GetState()
+        end)
+
+        if ok and state == Enum.HumanoidStateType.Dead then
+            return false
+        end
+
+        return true
+    end
+
     local function isPlayerCharacter(model)
         return Players:GetPlayerFromCharacter(model) ~= nil
     end
 
     local function hasHumanoid(model)
         return model and model:IsA("Model") and model:FindFirstChildOfClass("Humanoid") ~= nil
+    end
+
+    local function aboveFloor(part)
+        local floor = Workspace.FallenPartsDestroyHeight
+
+        if type(floor) ~= "number" then
+            return true
+        end
+
+        return part.Position.Y > floor + (Config.Feature1.FloorBuffer or 35)
+    end
+
+    local function withinVerticalLimit(root)
+        local localRoot = getLocalRoot()
+
+        if not localRoot then
+            return true
+        end
+
+        return math.abs(root.Position.Y - localRoot.Position.Y) <= (Config.Feature1.MaxVerticalDelta or 85)
+    end
+
+    local function inAimRange(part, screenCenter, rangeSquared)
+        local pos, visible = Camera:WorldToViewportPoint(part.Position)
+
+        if not visible then
+            return false, rangeSquared
+        end
+
+        local dx = pos.X - screenCenter.X
+        local dy = pos.Y - screenCenter.Y
+        local distSquared = dx * dx + dy * dy
+
+        return distSquared <= rangeSquared, distSquared
     end
 
     local function addModel(model)
@@ -132,10 +186,20 @@ return function(context)
         return Workspace:Raycast(Camera.CFrame.Position, part.Position - Camera.CFrame.Position, rayParams) == nil
     end
 
+    local function targetGeometryValid(root, part)
+        return root ~= nil
+            and part ~= nil
+            and root.Parent ~= nil
+            and part.Parent ~= nil
+            and aboveFloor(root)
+            and aboveFloor(part)
+            and withinVerticalLimit(root)
+    end
+
     local function considerCharacter(best, character, player, screenCenter, rangeSquared)
         local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 
-        if not humanoid or humanoid.Health <= 0 then
+        if not humanoidAlive(humanoid) then
             return best
         end
 
@@ -146,21 +210,13 @@ return function(context)
         local root = getRoot(character)
         local part = getTargetPart(character)
 
-        if not root or not part then
+        if not targetGeometryValid(root, part) then
             return best
         end
 
-        local pos, visible = Camera:WorldToViewportPoint(part.Position)
+        local inRange, distSquared = inAimRange(part, screenCenter, rangeSquared)
 
-        if not visible then
-            return best
-        end
-
-        local dx = pos.X - screenCenter.X
-        local dy = pos.Y - screenCenter.Y
-        local distSquared = dx * dx + dy * dy
-
-        if distSquared >= best.DistanceSquared or distSquared > rangeSquared then
+        if not inRange or distSquared >= best.DistanceSquared then
             return best
         end
 
@@ -216,16 +272,39 @@ return function(context)
     local function currentValid()
         local current = Targeting.current
 
-        if not current or not current.Character or not current.Part then
+        if not current or not current.Character then
             return false
         end
 
         local humanoid = current.Character:FindFirstChildOfClass("Humanoid")
 
-        return current.Character.Parent ~= nil
-            and current.Part.Parent ~= nil
-            and humanoid ~= nil
-            and humanoid.Health > 0
+        if not humanoidAlive(humanoid) then
+            return false
+        end
+
+        local root = getRoot(current.Character)
+        local part = getTargetPart(current.Character)
+
+        if not targetGeometryValid(root, part) then
+            return false
+        end
+
+        if current.Player and Config.Feature1.Check2 and current.Player.Team == LocalPlayer.Team then
+            return false
+        end
+
+        local range = Config.Feature1.Range or 150
+        local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+        local inRange = inAimRange(part, screenCenter, range * range)
+
+        if not inRange then
+            return false
+        end
+
+        current.Root = root
+        current.Part = part
+
+        return true
     end
 
     function Targeting.findTarget()
@@ -271,7 +350,7 @@ return function(context)
 
         local target = Targeting.current
 
-        if target and target.Part then
+        if target and target.Part and currentValid() then
             local delta = target.Part.Position - Camera.CFrame.Position
 
             if delta.Magnitude > 0 then
