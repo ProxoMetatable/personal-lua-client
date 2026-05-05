@@ -51,6 +51,10 @@ return function(context)
         return character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart or getTargetPart(character)
     end
 
+    local function getLocalRoot()
+        return getRoot(getLocalCharacter())
+    end
+
     local function humanoidAlive(humanoid)
         if not humanoid or humanoid.Health <= 0 then
             return false
@@ -73,6 +77,16 @@ return function(context)
 
     local function hasHumanoid(model)
         return model and model:IsA("Model") and model:FindFirstChildOfClass("Humanoid") ~= nil
+    end
+
+    local function notTooFarBelow(root)
+        local localRoot = getLocalRoot()
+
+        if not localRoot then
+            return true
+        end
+
+        return root.Position.Y >= localRoot.Position.Y - (Config.Feature1.MaxBelowLocal or 220)
     end
 
     local function inAimRange(part, screenCenter, rangeSquared)
@@ -167,17 +181,7 @@ return function(context)
             and part ~= nil
             and root.Parent ~= nil
             and part.Parent ~= nil
-    end
-
-    local function droppedTooFar(current, root)
-        local lastY = current.LastRootY or root.Position.Y
-        local maxDrop = Config.Feature1.MaxDownwardDrop or 45
-
-        return root.Position.Y < lastY - maxDrop
-    end
-
-    local function rememberHeight(target, root)
-        target.LastRootY = math.max(target.LastRootY or root.Position.Y, root.Position.Y)
+            and notTooFarBelow(root)
     end
 
     local function considerCharacter(best, character, player, screenCenter, rangeSquared)
@@ -213,7 +217,6 @@ return function(context)
         best.Root = root
         best.Player = player
         best.DistanceSquared = distSquared
-        best.LastRootY = root.Position.Y
 
         return best
     end
@@ -274,10 +277,6 @@ return function(context)
             return false
         end
 
-        if droppedTooFar(current, root) then
-            return false
-        end
-
         if current.Player and Config.Feature1.Check2 and current.Player.Team == LocalPlayer.Team then
             return false
         end
@@ -292,7 +291,6 @@ return function(context)
 
         current.Root = root
         current.Part = part
-        rememberHeight(current, root)
 
         return true
     end
@@ -307,8 +305,7 @@ return function(context)
             Part = nil,
             Root = nil,
             Player = nil,
-            DistanceSquared = range * range,
-            LastRootY = nil
+            DistanceSquared = range * range
         }
 
         best = scanPlayers(best, screenCenter, best.DistanceSquared)
