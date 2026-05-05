@@ -27,8 +27,9 @@ The loader only starts for `UserId == 1871025207`. Other users receive a disable
 ## Target Safety
 
 - Locked targets are revalidated before camera movement.
-- Dead humanoids, dead humanoid states, off-FOV targets, underground parts, and targets too far above/below the local character are dropped instantly.
-- `MaxVerticalDelta` and `FloorBuffer` in `Config.lua` prevent down-map death models from causing obvious camera flicks.
+- Dead humanoids, dead humanoid states, and off-FOV targets are dropped instantly.
+- If a locked target suddenly drops more than `MaxDownwardDrop`, the lock is cleared to prevent obvious down-map death flicks.
+- Target acquisition does not reject normal map height, so low or underground map layouts can still lock normally.
 
 ## Performance
 
