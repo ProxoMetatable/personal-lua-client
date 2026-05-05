@@ -5,7 +5,8 @@ return function(context)
 
     local Weapons = {
         running = false,
-        weaponsFolder = nil
+        weaponsFolder = nil,
+        baselineCaptured = false
     }
 
     local WEAPONS_NAME = "Weapons"
@@ -15,40 +16,108 @@ return function(context)
     local folderChildConn = nil
     local folderDestroyConn = nil
 
-    local function validWeaponsFolder(folder)
-        return typeof(folder) == "Instance" and folder:IsA("Folder") and folder.Name == WEAPONS_NAME
+    local nativeInfinite = {}
+    local managedFolders = {}
+    local scannedWeaponFolders = {}
+
+    local function isFolder(instance)
+        return typeof(instance) == "Instance" and instance:IsA("Folder")
     end
 
-    local function ensureInfiniteMarker(folder)
-        if not folder or not folder:IsA("Folder") then
-            return false
-        end
-
-        local existing = folder:FindFirstChild(MARKER_NAME)
-
-        if existing then
-            return existing:IsA("Folder")
-        end
-
-        local marker = Instance.new("Folder")
-        marker.Name = MARKER_NAME
-
-        local added = false
-        pcall(function()
-            marker.Parent = folder
-            added = true
-        end)
-
-        return added
+    local function isWeaponsFolder(instance)
+        return isFolder(instance) and instance.Name == WEAPONS_NAME
     end
 
-    local function processFolderChildren(folder)
+    local function getMarker(folder)
+        if not folder then
+            return nil
+        end
+
+        local marker = folder:FindFirstChild(MARKER_NAME)
+
+        if marker and marker:IsA("Folder") then
+            return marker
+        end
+
+        return nil
+    end
+
+    local function cacheNativeState(folder)
+        if not isWeaponsFolder(folder) then
+            return
+        end
+
+        if scannedWeaponFolders[folder] then
+            return
+        end
+
+        scannedWeaponFolders[folder] = true
+
         local children = folder:GetChildren()
 
         for _, child in ipairs(children) do
-            if child:IsA("Folder") then
-                ensureInfiniteMarker(child)
+            if isFolder(child) and getMarker(child) then
+                nativeInfinite[child] = true
             end
+        end
+    end
+
+    local function removeManagedMarkers()
+        for folder in pairs(managedFolders) do
+            if isFolder(folder) then
+                local marker = getMarker(folder)
+
+                if marker then
+                    pcall(function()
+                        marker:Destroy()
+                    end)
+                end
+            end
+        end
+
+        managedFolders = {}
+    end
+
+    local function processWeaponFolderChild(child)
+        if not isFolder(child) then
+            return
+        end
+
+        local marker = getMarker(child)
+
+        if marker then
+            if not nativeInfinite[child] then
+                managedFolders[child] = true
+            else
+                managedFolders[child] = nil
+            end
+
+            return
+        end
+
+        local newMarker = Instance.new("Folder")
+        newMarker.Name = MARKER_NAME
+
+        local added = false
+        pcall(function()
+            newMarker.Parent = child
+            added = true
+        end)
+
+        if added then
+            managedFolders[child] = true
+        end
+    end
+
+    local function processWeaponFolderChildren(folder)
+        if not isWeaponsFolder(folder) then
+            return
+        end
+
+        local children = folder:GetChildren()
+
+        for _, child in ipairs(children) do
+            processWeaponFolderChild(child)
         end
     end
 
@@ -60,7 +129,7 @@ return function(context)
     end
 
     local function attachWeaponFolder(folder)
-        if not validWeaponsFolder(folder) then
+        if not isWeaponsFolder(folder) then
             return
         end
 
@@ -69,14 +138,18 @@ return function(context)
         end
 
         Weapons.weaponsFolder = folder
+
         clearFolderConns()
 
-        processFolderChildren(folder)
+        if not Weapons.baselineCaptured then
+            cacheNativeState(folder)
+            Weapons.baselineCaptured = true
+        end
+
+        processWeaponFolderChildren(folder)
 
         folderChildConn = Connections.add("WeaponsFolderChild", folder.ChildAdded:Connect(function(child)
-            if child:IsA("Folder") then
-                ensureInfiniteMarker(child)
-            end
+            processWeaponFolderChild(child)
         end))
 
         folderDestroyConn = Connections.add("WeaponsFolderDestroy", folder.Destroying:Connect(function()
@@ -86,15 +159,17 @@ return function(context)
     end
 
     function Weapons.refresh()
-        if not Config.Feature3 or not Config.Feature3.InfiniteAmmo then
+        local folder = ReplicatedStorage:FindFirstChild(WEAPONS_NAME)
+
+        if not folder then
             return Weapons
         end
 
-        local folder = ReplicatedStorage:FindFirstChild(WEAPONS_NAME)
-
-        if folder and validWeaponsFolder(folder) then
-            attachWeaponFolder(folder)
+        if not Weapons.running then
+            return Weapons
         end
+
+        attachWeaponFolder(folder)
 
         return Weapons
     end
@@ -111,14 +186,24 @@ return function(context)
         Weapons.running = true
 
         folderAddedConn = Connections.add("WeaponsFolderAdded", ReplicatedStorage.ChildAdded:Connect(function(child)
-            if child.Name == WEAPONS_NAME and child:IsA("Folder") then
+            if child.Name == WEAPONS_NAME and isFolder(child) then
+                if not Weapons.baselineCaptured then
+                    cacheNativeState(child)
+                    Weapons.baselineCaptured = true
+                end
+
                 attachWeaponFolder(child)
             end
         end))
 
         local weaponsFolder = ReplicatedStorage:FindFirstChild(WEAPONS_NAME)
 
-        if weaponsFolder and validWeaponsFolder(weaponsFolder) then
+        if weaponsFolder and isWeaponsFolder(weaponsFolder) then
+            if not Weapons.baselineCaptured then
+                cacheNativeState(weaponsFolder)
+                Weapons.baselineCaptured = true
+            end
+
             attachWeaponFolder(weaponsFolder)
         end
 
@@ -126,8 +211,14 @@ return function(context)
     end
 
     function Weapons.stop()
+        if not Weapons.running and next(managedFolders) == nil then
+            return Weapons
+        end
+
         Weapons.running = false
         Weapons.weaponsFolder = nil
+
+        removeManagedMarkers()
 
         if folderAddedConn then
             Connections.disconnect("WeaponsFolderAdded")
