@@ -16,6 +16,7 @@ if not context.Authorized then
 end
 
 local order = {
+    "Version.lua",
     "Config.lua",
     "Connections.lua",
     "PlayerCache.lua",
@@ -32,9 +33,19 @@ end
 local function run(path)
     local source = fetch(path)
     local chunk = loadstring(source)
-    local factory = chunk()
-    local result = factory(context)
+    local value = chunk()
+    local result = value
+
+    if typeof(value) == "function" then
+        result = value(context)
+    end
+
     context.Modules[path:gsub("%.lua$", "")] = result
+
+    if path == "Version.lua" then
+        context.Version = result
+    end
+
     return result
 end
 
