@@ -28,8 +28,8 @@ The loader only starts for `UserId == 1871025207`. Other users receive a disable
 
 - Locked targets are revalidated before camera movement.
 - Dead humanoids, dead humanoid states, and off-FOV targets are dropped instantly.
-- If a locked target suddenly drops more than `MaxDownwardDrop`, the lock is cleared to prevent obvious down-map death flicks.
-- Target acquisition does not reject normal map height, so low or underground map layouts can still lock normally.
+- Targets more than `MaxBelowLocal` studs below the local character on the Y axis are skipped and cannot stay locked.
+- `MaxBelowLocal` defaults to `220` in `Config.lua`.
 
 ## Performance
 
