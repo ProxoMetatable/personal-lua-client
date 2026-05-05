@@ -47,7 +47,7 @@ return function(context)
 
     local function snapshot()
         return {
-            Version = 3,
+            Version = 4,
             Feature1 = {
                 Enabled = Config.Feature1.Enabled,
                 Range = Config.Feature1.Range,
@@ -68,7 +68,8 @@ return function(context)
                 UseTeam = Config.Feature2.UseTeam
             },
             Feature3 = {
-                InfiniteAmmo = Config.Feature3.InfiniteAmmo
+                InfiniteAmmo = Config.Feature3.InfiniteAmmo,
+                ProjectileTravel = Config.Feature3.ProjectileTravel
             },
             UI = {
                 Enabled = Config.UI.Enabled
@@ -172,6 +173,10 @@ return function(context)
 
         if type(feature3) == "table" and type(feature3.InfiniteAmmo) == "boolean" then
             Config.Feature3.InfiniteAmmo = feature3.InfiniteAmmo
+        end
+
+        if type(feature3) == "table" and type(feature3.ProjectileTravel) == "boolean" then
+            Config.Feature3.ProjectileTravel = feature3.ProjectileTravel
         end
 
         if type(data.UI) == "table" and type(data.UI.Enabled) == "boolean" then
@@ -474,7 +479,21 @@ return function(context)
                 Config.Feature3.InfiniteAmmo = value
 
                 if Weapons and Weapons.setEnabled then
-                    Weapons.setEnabled(value)
+                    Weapons.setEnabled("InfiniteAmmo", value)
+                end
+
+                saveConfig()
+            end
+        })
+        WeaponsTab:CreateToggle({
+            Name = "Projectile's Travel Instantly",
+            CurrentValue = Config.Feature3.ProjectileTravel,
+            Flag = "ProjectileTravel",
+            Callback = function(value)
+                Config.Feature3.ProjectileTravel = value
+
+                if Weapons and Weapons.setEnabled then
+                    Weapons.setEnabled("ProjectileTravel", value)
                 end
 
                 saveConfig()

@@ -113,10 +113,8 @@ return function(context)
             Targeting.start()
         end
 
-        if Weapons and Weapons.start and Config.Feature3 and Config.Feature3.InfiniteAmmo then
+        if Weapons and Weapons.start then
             Weapons.start()
-        elseif Weapons and Weapons.setEnabled and Config.Feature3 then
-            Weapons.setEnabled(false)
         end
 
         if Gui and Gui.start then

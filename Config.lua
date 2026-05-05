@@ -1,10 +1,10 @@
 return function(context)
-    local version = context.Version or {Number = "1.1.4"}
+    local version = context.Version or {Number = "1.1.5"}
 
     local Config = {
         Name = "Comet - Private",
         Version = {
-            Number = version.Number or "1.1.4",
+            Number = version.Number or "1.1.5",
             Latest = nil,
             Status = "Checking"
         },
@@ -30,7 +30,8 @@ return function(context)
             UseTeam = true
         },
         Feature3 = {
-            InfiniteAmmo = false
+            InfiniteAmmo = false,
+            ProjectileTravel = false
         },
         UI = {
             Enabled = true
