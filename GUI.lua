@@ -61,7 +61,7 @@ return function(context)
             Feature2 = {
                 Style1 = Config.Feature2.Style1,
                 Style2 = Config.Feature2.Style2,
-                Style3 = Config.Feature3 and Config.Feature3.InfiniteAmmo or false,
+                Style3 = Config.Feature2.Style3,
                 Style4 = Config.Feature2.Style4,
                 Style5 = Config.Feature2.Style5,
                 MainColor = encodeColor(Config.Feature2.MainColor),
