@@ -51,10 +51,6 @@ return function(context)
         return character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart or getTargetPart(character)
     end
 
-    local function getLocalRoot()
-        return getRoot(getLocalCharacter())
-    end
-
     local function humanoidAlive(humanoid)
         if not humanoid or humanoid.Health <= 0 then
             return false
@@ -77,26 +73,6 @@ return function(context)
 
     local function hasHumanoid(model)
         return model and model:IsA("Model") and model:FindFirstChildOfClass("Humanoid") ~= nil
-    end
-
-    local function aboveFloor(part)
-        local floor = Workspace.FallenPartsDestroyHeight
-
-        if type(floor) ~= "number" then
-            return true
-        end
-
-        return part.Position.Y > floor + (Config.Feature1.FloorBuffer or 35)
-    end
-
-    local function withinVerticalLimit(root)
-        local localRoot = getLocalRoot()
-
-        if not localRoot then
-            return true
-        end
-
-        return math.abs(root.Position.Y - localRoot.Position.Y) <= (Config.Feature1.MaxVerticalDelta or 85)
     end
 
     local function inAimRange(part, screenCenter, rangeSquared)
@@ -186,14 +162,22 @@ return function(context)
         return Workspace:Raycast(Camera.CFrame.Position, part.Position - Camera.CFrame.Position, rayParams) == nil
     end
 
-    local function targetGeometryValid(root, part)
+    local function basicGeometryValid(root, part)
         return root ~= nil
             and part ~= nil
             and root.Parent ~= nil
             and part.Parent ~= nil
-            and aboveFloor(root)
-            and aboveFloor(part)
-            and withinVerticalLimit(root)
+    end
+
+    local function droppedTooFar(current, root)
+        local lastY = current.LastRootY or root.Position.Y
+        local maxDrop = Config.Feature1.MaxDownwardDrop or 45
+
+        return root.Position.Y < lastY - maxDrop
+    end
+
+    local function rememberHeight(target, root)
+        target.LastRootY = math.max(target.LastRootY or root.Position.Y, root.Position.Y)
     end
 
     local function considerCharacter(best, character, player, screenCenter, rangeSquared)
@@ -210,7 +194,7 @@ return function(context)
         local root = getRoot(character)
         local part = getTargetPart(character)
 
-        if not targetGeometryValid(root, part) then
+        if not basicGeometryValid(root, part) then
             return best
         end
 
@@ -229,6 +213,7 @@ return function(context)
         best.Root = root
         best.Player = player
         best.DistanceSquared = distSquared
+        best.LastRootY = root.Position.Y
 
         return best
     end
@@ -285,7 +270,11 @@ return function(context)
         local root = getRoot(current.Character)
         local part = getTargetPart(current.Character)
 
-        if not targetGeometryValid(root, part) then
+        if not basicGeometryValid(root, part) then
+            return false
+        end
+
+        if droppedTooFar(current, root) then
             return false
         end
 
@@ -303,6 +292,7 @@ return function(context)
 
         current.Root = root
         current.Part = part
+        rememberHeight(current, root)
 
         return true
     end
@@ -317,7 +307,8 @@ return function(context)
             Part = nil,
             Root = nil,
             Player = nil,
-            DistanceSquared = range * range
+            DistanceSquared = range * range,
+            LastRootY = nil
         }
 
         best = scanPlayers(best, screenCenter, best.DistanceSquared)
