@@ -10,6 +10,12 @@ local client = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProxoM
 
 The loader only starts for `UserId == 1871025207`. Other users receive a disabled context and no modules are loaded.
 
+## Version
+
+- A small top-right badge shows `Comet - version - Latest/Old`.
+- The badge starts as `Checking` and updates after fetching `Version.lua`.
+- Rayfield shows a notification with the current/latest version when `Rayfield:Notify` is available.
+
 ## Controls
 
 - Hold right click to activate the aimbot.
@@ -26,14 +32,16 @@ The loader only starts for `UserId == 1871025207`. Other users receive a disable
 
 ## Files
 
+- `Version.lua` stores the latest version number.
 - `Loader.lua` authorizes the local player and loads every module in order.
-- `Config.lua` stores shared settings.
+- `Config.lua` stores shared settings and runtime version state.
 - `Connections.lua` owns connection registration and cleanup.
 - `PlayerCache.lua` creates and removes Drawing objects per player.
 - `Targeting.lua` owns cached target selection for players and NPC-style workspace models.
-- `Overlay.lua` updates boxes, names, health bars, distances, tracers, and the range circle.
+- `Overlay.lua` updates boxes, names, health bars, distances, tracers, the range circle, and the version badge.
 - `GUI.lua` builds the Rayfield customization menu and owns Comet config saving.
-- `Main.lua` wires services, fixed input controls, GUI lifecycle, player lifecycle, character lifecycle, and the render loop after Roblox camera updates.
+- `VersionCheck.lua` compares the running version to the remote latest version and sends Rayfield notifications.
+- `Main.lua` wires services, fixed input controls, GUI lifecycle, player lifecycle, character lifecycle, version check startup, and the render loop after Roblox camera updates.
 
 ## Visibility
 
