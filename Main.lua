@@ -107,6 +107,10 @@ return function(context)
         Main.running = true
         PlayerCache.setupAll()
 
+        if Targeting and Targeting.start then
+            Targeting.start()
+        end
+
         if Gui and Gui.start then
             Gui.start()
         end
@@ -141,6 +145,11 @@ return function(context)
         end
 
         Connections.disconnectAll()
+
+        if Targeting and Targeting.stop then
+            Targeting.stop()
+        end
+
         Overlay.hideAll()
         PlayerCache.clear()
 
