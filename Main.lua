@@ -10,6 +10,7 @@ return function(context)
     local Targeting = context.Targeting
     local Overlay = context.Overlay
     local Gui = context.Gui
+    local VersionCheck = context.VersionCheck
     local renderStepName = "CometPrivateMain"
 
     local Main = {
@@ -113,6 +114,10 @@ return function(context)
 
         if Gui and Gui.start then
             Gui.start()
+        end
+
+        if VersionCheck and VersionCheck.start then
+            VersionCheck.start()
         end
 
         Connections.add("InputBegan", UserInputService.InputBegan:Connect(onInputBegan))
