@@ -1,6 +1,7 @@
 return function(context)
     local HttpService = game:GetService("HttpService")
     local Config = context.Config
+    local Weapons = context.Weapons
 
     local Gui = {
         running = false,
@@ -39,7 +40,7 @@ return function(context)
 
         local r = math.clamp(tonumber(value.R) or 255, 0, 255)
         local g = math.clamp(tonumber(value.G) or 0, 0, 255)
-        local b = math.clamp(tonumber(value.B) or 0, 0, 255)
+        local b = math.clamp(tonumber(value.B) or 0, 255)
 
         return Color3.fromRGB(r, g, b)
     end
@@ -60,11 +61,14 @@ return function(context)
             Feature2 = {
                 Style1 = Config.Feature2.Style1,
                 Style2 = Config.Feature2.Style2,
-                Style3 = Config.Feature2.Style3,
+                Style3 = Config.Feature3 and Config.Feature3.InfiniteAmmo or false,
                 Style4 = Config.Feature2.Style4,
                 Style5 = Config.Feature2.Style5,
                 MainColor = encodeColor(Config.Feature2.MainColor),
                 UseTeam = Config.Feature2.UseTeam
+            },
+            Feature3 = {
+                InfiniteAmmo = Config.Feature3.InfiniteAmmo
             },
             UI = {
                 Enabled = Config.UI.Enabled
@@ -162,6 +166,12 @@ return function(context)
             if color then
                 Config.Feature2.MainColor = color
             end
+        end
+
+        local feature3 = data.Feature3
+
+        if type(feature3) == "table" and type(feature3.InfiniteAmmo) == "boolean" then
+            Config.Feature3.InfiniteAmmo = feature3.InfiniteAmmo
         end
 
         if type(data.UI) == "table" and type(data.UI.Enabled) == "boolean" then
@@ -262,6 +272,7 @@ return function(context)
 
         local AimTab = Window:CreateTab("Aiming", 0)
         local OverlayTab = Window:CreateTab("Overlay", 0)
+        local WeaponsTab = Window:CreateTab("Weapons", 0)
         local SettingsTab = Window:CreateTab("Settings", 0)
 
         AimTab:CreateSection("Camera Assist")
@@ -450,6 +461,22 @@ return function(context)
             Flag = "OverlayMainColor",
             Callback = function(value)
                 Config.Feature2.MainColor = value
+                saveConfig()
+            end
+        })
+
+        WeaponsTab:CreateSection("Ammunition")
+        WeaponsTab:CreateToggle({
+            Name = "Infinite Ammo",
+            CurrentValue = Config.Feature3.InfiniteAmmo,
+            Flag = "InfiniteAmmo",
+            Callback = function(value)
+                Config.Feature3.InfiniteAmmo = value
+
+                if Weapons and Weapons.setEnabled then
+                    Weapons.setEnabled(value)
+                end
+
                 saveConfig()
             end
         })
