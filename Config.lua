@@ -1,10 +1,10 @@
 return function(context)
-    local version = context.Version or {Number = "1.1.2"}
+    local version = context.Version or {Number = "1.1.3"}
 
     local Config = {
         Name = "Comet - Private",
         Version = {
-            Number = version.Number or "1.1.2",
+            Number = version.Number or "1.1.3",
             Latest = nil,
             Status = "Checking"
         },
@@ -18,7 +18,7 @@ return function(context)
             Check2 = true,
             ScanInterval = 0.05,
             MaxTargets = 64,
-            MaxDownwardDrop = 45
+            MaxBelowLocal = 220
         },
         Feature2 = {
             Style1 = true,
