@@ -1,6 +1,13 @@
 return function(context)
+    local version = context.Version or {Number = "1.1.0"}
+
     local Config = {
         Name = "Comet - Private",
+        Version = {
+            Number = version.Number or "1.1.0",
+            Latest = nil,
+            Status = "Checking"
+        },
         Feature1 = {
             Enabled = true,
             Active = false,
