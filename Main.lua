@@ -121,6 +121,10 @@ return function(context)
             Gui.start()
         end
 
+        if Weapons and Weapons.syncState then
+            Weapons.syncState()
+        end
+
         if VersionCheck and VersionCheck.start then
             VersionCheck.start()
         end

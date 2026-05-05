@@ -1,3 +1,3 @@
 return {
-    Number = "1.1.7"
+    Number = "1.1.8"
 }

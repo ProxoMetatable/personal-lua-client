@@ -304,9 +304,13 @@ return function(context)
 
             if isNumericValue(valueObj) and snapshot[name] ~= nil then
                 if enabled then
-                    pcall(function()
-                        valueObj.Value = value
-                    end)
+                    local current = valueObj.Value
+
+                    if current ~= value then
+                        pcall(function()
+                            valueObj.Value = value
+                        end)
+                    end
                 end
 
                 touched[name] = true
@@ -352,9 +356,13 @@ return function(context)
             local valueObj = weapon:FindFirstChild(name)
 
             if isNumericValue(valueObj) and snapshot[name] ~= nil then
-                pcall(function()
-                    valueObj.Value = snapshot[name]
-                end)
+                local target = snapshot[name]
+
+                if valueObj.Value ~= target then
+                    pcall(function()
+                        valueObj.Value = target
+                    end)
+                end
             end
         end
 
@@ -659,6 +667,20 @@ return function(context)
             end
         end
 
+        if hasAnyEnabled() then
+            if Weapons.running then
+                applyStateToCurrent()
+            else
+                Weapons.start()
+            end
+        else
+            Weapons.stop()
+        end
+
+        return Weapons
+    end
+
+    function Weapons.syncState()
         if hasAnyEnabled() then
             if Weapons.running then
                 applyStateToCurrent()

@@ -1,10 +1,10 @@
 return function(context)
-    local version = context.Version or {Number = "1.1.7"}
+    local version = context.Version or {Number = "1.1.8"}
 
     local Config = {
         Name = "Comet - Private",
         Version = {
-            Number = version.Number or "1.1.7",
+            Number = version.Number or "1.1.8",
             Latest = nil,
             Status = "Checking"
         },
