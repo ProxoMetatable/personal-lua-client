@@ -30,6 +30,42 @@ return function(context)
     table.insert(Overlay.drawings, circle)
     table.insert(Overlay.drawings, versionText)
 
+    local function valueFromInstance(instance)
+        local ok, value = pcall(function()
+            return tonumber(instance.Value)
+        end)
+
+        if ok and value then
+            return value
+        end
+
+        return nil
+    end
+
+    local function getHealthData(player, humanoid)
+        local nrpbs = player and player:FindFirstChild("NRPBS")
+        local health = valueFromInstance(nrpbs and nrpbs:FindFirstChild("Health"))
+
+        if health ~= nil then
+            local maxHealth = valueFromInstance(nrpbs and nrpbs:FindFirstChild("MaxHealth"))
+
+            if maxHealth == nil then
+                maxHealth = humanoid and tonumber(humanoid.MaxHealth) or 100
+            end
+
+            return health, maxHealth
+        end
+
+        if humanoid then
+            local current = tonumber(humanoid.Health)
+            local maxHealth = tonumber(humanoid.MaxHealth)
+
+            return current, maxHealth
+        end
+
+        return nil, nil
+    end
+
     local function setVisible(obj, visible)
         if typeof(obj) == "table" then
             for _, child in pairs(obj) do
@@ -126,8 +162,9 @@ return function(context)
         local root = character.HumanoidRootPart
         local head = character.Head
         local humanoid = character.Humanoid
+        local health, maxHealth = getHealthData(player, humanoid)
 
-        if humanoid.Health <= 0 then
+        if not health or health <= 0 then
             Overlay.hidePlayer(data)
             return
         end
@@ -174,14 +211,20 @@ return function(context)
         end
 
         if Config.Feature2.Style3 then
-            local pct = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
+            local maxHealthValue = maxHealth
+
+            if maxHealthValue == nil or maxHealthValue <= 0 then
+                maxHealthValue = 100
+            end
+
+            local pct = math.clamp(health / maxHealthValue, 0, 1)
 
             data.Bar.Size = Vector2.new(4, h * pct)
             data.Bar.Position = Vector2.new(top.X - w / 2 - 6, top.Y + h * (1 - pct))
             data.Bar.Color = Color3.fromRGB(255 - (255 * pct), 255 * pct, 0)
             data.Bar.Visible = true
 
-            data.Text2.Text = tostring(math.floor(humanoid.Health))
+            data.Text2.Text = tostring(math.floor(health))
             data.Text2.Position = Vector2.new(top.X - w / 2 - 20, top.Y + h / 2)
             data.Text2.Color = data.Bar.Color
             data.Text2.Visible = true

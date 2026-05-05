@@ -55,8 +55,42 @@ return function(context)
         return getRoot(getLocalCharacter())
     end
 
-    local function humanoidAlive(humanoid)
-        if not humanoid or humanoid.Health <= 0 then
+    local function numberFromValue(instance)
+        local ok, value = pcall(function()
+            return tonumber(instance.Value)
+        end)
+
+        if ok and value then
+            return value
+        end
+
+        return nil
+    end
+
+    local function getPlayerHealth(player, humanoid)
+        if player then
+            local nrpbs = player:FindFirstChild("NRPBS")
+
+            if nrpbs then
+                local health = numberFromValue(nrpbs:FindFirstChild("Health"))
+
+                if health ~= nil then
+                    return health
+                end
+            end
+        end
+
+        return humanoid and tonumber(humanoid.Health) or nil
+    end
+
+    local function humanoidAlive(player, humanoid)
+        local health = getPlayerHealth(player, humanoid)
+
+        if not health or health <= 0 then
+            return false
+        end
+
+        if not humanoid then
             return false
         end
 
@@ -187,7 +221,7 @@ return function(context)
     local function considerCharacter(best, character, player, screenCenter, rangeSquared)
         local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 
-        if not humanoidAlive(humanoid) then
+        if not humanoidAlive(player, humanoid) then
             return best
         end
 
@@ -266,7 +300,7 @@ return function(context)
 
         local humanoid = current.Character:FindFirstChildOfClass("Humanoid")
 
-        if not humanoidAlive(humanoid) then
+        if not humanoidAlive(current.Player, humanoid) then
             return false
         end
 
