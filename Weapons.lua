@@ -15,7 +15,7 @@ return function(context)
     local SPEED_NAME = "Speed"
     local MAX_SPEED_NAME = "MaxSpeed"
     local SPEED_PCT_NAME = "Speed%"
-    local SPEED_TRAVEL_VALUE = 150000
+    local SPEED_TRAVEL_VALUE = 70000
     local SPEED_PCT_TRAVEL_VALUE = 0
 
     local folderAddedConn = nil
