@@ -8,7 +8,9 @@ return function(context)
             Speed = 8,
             Part = "Head",
             Check1 = true,
-            Check2 = true
+            Check2 = true,
+            ScanInterval = 0.05,
+            MaxTargets = 64
         },
         Feature2 = {
             Style1 = true,
