@@ -2,7 +2,9 @@ return function(context)
     local Config = context.Config
 
     local VersionCheck = {
-        checked = false
+        running = false,
+        checked = false,
+        notifiedOutdated = false
     }
 
     local function notify(title, content)
@@ -46,6 +48,17 @@ return function(context)
         return nil
     end
 
+    local function markVersion(version, status, latest)
+        version.Status = status
+        if latest then
+            version.Latest = latest
+        end
+    end
+
+    local function compareVersions(latest, current)
+        return latest == current
+    end
+
     function VersionCheck.check()
         local version = Config.Version
 
@@ -64,20 +77,19 @@ return function(context)
             latest = readVersion(source)
         end
 
-        version.Latest = latest
-
         if not latest then
-            version.Status = "Unknown"
-            notify("Comet", "Version check failed. Running " .. current .. ".")
+            markVersion(version, "Unknown")
             return version.Status
         end
 
-        if latest == current then
-            version.Status = "Latest"
-            notify("Comet", "Running " .. current .. " - Latest.")
+        if compareVersions(latest, current) then
+            markVersion(version, "Latest", latest)
         else
-            version.Status = "Old"
-            notify("Comet", "Running " .. current .. " - Old. Latest is " .. latest .. ".")
+            markVersion(version, "Old", latest)
+            if not VersionCheck.notifiedOutdated then
+                notify("Comet", "Version out of date. Running " .. current .. ". Latest is " .. latest .. ".")
+                VersionCheck.notifiedOutdated = true
+            end
         end
 
         VersionCheck.checked = true
@@ -85,9 +97,28 @@ return function(context)
     end
 
     function VersionCheck.start()
+        if VersionCheck.running then
+            return VersionCheck
+        end
+
+        VersionCheck.running = true
+
         task.spawn(function()
             VersionCheck.check()
+            while VersionCheck.running do
+                task.wait(10)
+                if not VersionCheck.running then
+                    break
+                end
+                VersionCheck.check()
+            end
         end)
+
+        return VersionCheck
+    end
+
+    function VersionCheck.stop()
+        VersionCheck.running = false
 
         return VersionCheck
     end

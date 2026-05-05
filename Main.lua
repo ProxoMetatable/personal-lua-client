@@ -164,6 +164,10 @@ return function(context)
             Weapons.stop()
         end
 
+        if VersionCheck and VersionCheck.stop then
+            VersionCheck.stop()
+        end
+
         Overlay.hideAll()
         PlayerCache.clear()
 

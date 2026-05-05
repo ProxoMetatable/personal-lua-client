@@ -51,21 +51,27 @@ return function(context)
 
         versionText.Text = "Comet - " .. number .. " - " .. status
 
-        if status == "Latest" then
-            versionText.Color = Color3.fromRGB(90, 255, 120)
-        elseif status == "Old" then
-            versionText.Color = Color3.fromRGB(255, 90, 90)
+        if status == "Old" then
+            versionText.Color = Color3.fromRGB(255, 210, 210)
         else
             versionText.Color = Color3.fromRGB(255, 255, 255)
         end
 
-        local width = 160
+        local width = 260
 
         pcall(function()
-            width = versionText.TextBounds.X
+            width = math.max(120, versionText.TextBounds.X)
         end)
 
-        versionText.Position = Vector2.new(Camera.ViewportSize.X - width - 12, 10)
+        local x = Camera.ViewportSize.X - width - 12
+        local y = 12
+
+        if x < 12 then
+            x = 12
+            y = 8
+        end
+
+        versionText.Position = Vector2.new(x, y)
         versionText.Visible = true
     end
 
