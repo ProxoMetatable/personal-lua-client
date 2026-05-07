@@ -17,6 +17,10 @@ return function(context)
 
     local saveRoot = "CometPrivate"
     local legacySaveFile = saveRoot .. "/config.json"
+    local SAVE_DEBOUNCE = 0.45
+    local saveToken = 0
+    local savePending = false
+    local pendingProfileName = nil
 
     local function fileApiReady()
         return typeof(writefile) == "function"
@@ -226,13 +230,15 @@ return function(context)
         }, "\n")
     end
 
-    local function saveConfig(profileName)
+    local function flushSaveConfig(profileName)
         if not ConfigMigrator then
             return false
         end
 
         local active = sanitizeProfileName(profileName or Config.Profiles.Active)
         Config.Profiles.Active = active
+        savePending = false
+        pendingProfileName = nil
 
         local snapshot = ConfigMigrator.snapshot()
         local ok = writeJson(profileFile(active), snapshot)
@@ -241,13 +247,60 @@ return function(context)
             writeJson(legacySaveFile, snapshot)
         end
 
+        if Config.Diagnostics then
+            Config.Diagnostics.LastConfigSaveAt = os.clock()
+            Config.Diagnostics.LastConfigSaveOk = ok
+        end
+
         return ok
+    end
+
+    local function cancelPendingSave()
+        saveToken += 1
+        savePending = false
+        pendingProfileName = nil
+    end
+
+    local function saveConfig(profileName, immediate)
+        if not ConfigMigrator then
+            return false
+        end
+
+        local active = sanitizeProfileName(profileName or Config.Profiles.Active)
+        Config.Profiles.Active = active
+        pendingProfileName = active
+
+        if immediate then
+            saveToken += 1
+            return flushSaveConfig(active)
+        end
+
+        savePending = true
+        saveToken += 1
+
+        local token = saveToken
+
+        if task and task.delay then
+            task.delay(SAVE_DEBOUNCE, function()
+                if token ~= saveToken or not savePending then
+                    return
+                end
+
+                flushSaveConfig(pendingProfileName)
+            end)
+
+            return true
+        end
+
+        return flushSaveConfig(active)
     end
 
     local function loadConfig(profileName)
         if not ConfigMigrator then
             return false
         end
+
+        cancelPendingSave()
 
         local active = sanitizeProfileName(profileName or Config.Profiles.Active)
         local data = readJson(profileFile(active))
@@ -295,6 +348,10 @@ return function(context)
 
     function Gui.saveConfig(profileName)
         return saveConfig(profileName)
+    end
+
+    function Gui.flushConfig(profileName)
+        return saveConfig(profileName, true)
     end
 
     function Gui.loadConfig(profileName)
@@ -674,7 +731,7 @@ return function(context)
             title = "Save Profile",
             description = "Writes the active settings to the selected profile.",
             callback = function()
-                if saveConfig(Config.Profiles.Active) then
+                if saveConfig(Config.Profiles.Active, true) then
                     Gui.notify("Comet", "Saved profile " .. Config.Profiles.Active .. ".", 4)
                 else
                     Gui.notify("Comet", "Profile save failed.", 4)
@@ -881,14 +938,14 @@ return function(context)
             return Gui
         end
 
-        saveConfig(Config.Profiles.Active)
+        saveConfig(Config.Profiles.Active, true)
 
         return Gui
     end
 
     function Gui.destroy()
         Config.Feature1.Active = false
-        saveConfig(Config.Profiles.Active)
+        saveConfig(Config.Profiles.Active, true)
 
         if Gui.UI and Gui.UI.destroy then
             Gui.UI:destroy()

@@ -4,8 +4,16 @@ A modular Lua client layout designed to be loaded from raw GitHub URLs.
 
 ## Loadstring
 
+Modular loader:
+
 ```lua
 local client = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProxoMetatable/personal-lua-client/main/Loader.lua", true))()
+```
+
+Production bundle:
+
+```lua
+local client = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProxoMetatable/personal-lua-client/main/dist/client.lua", true))()
 ```
 
 The loader is not bound to a specific Roblox `UserId`; any user who can load the raw URL can start the client.
@@ -18,6 +26,7 @@ The loader is not bound to a specific Roblox `UserId`; any user who can load the
 - Cache busting uses the manifest build by default instead of forcing a new URL every run.
 - `source.lua` delegates to `Loader.lua` so the modular build remains the source of truth.
 - Implementation modules live under `src/`; the public loader files stay at the repository root.
+- `dist/client.lua` embeds the manifest and every module for one-file production loading.
 
 ## Version
 
@@ -39,6 +48,17 @@ The loader is not bound to a specific Roblox `UserId`; any user who can load the
 - Profiles live under `CometPrivate/profiles/<PlaceId>/<profile>.json` when per-place profiles are enabled.
 - A legacy copy is still written to `CometPrivate/config.json` for compatibility.
 - Config version `6` adds saved keybinds, UI provider settings, profile settings, diagnostics settings, and the `MaxBelowLocal` value.
+- UI setting changes are debounced before writing to disk; explicit profile saves and shutdown still flush immediately.
+
+## Bundle Build
+
+Regenerate the production bundle after changing `Loader.lua`, `Manifest.lua`, or files under `src/`:
+
+```powershell
+.\scripts\build-bundle.ps1
+```
+
+The build script writes `dist/client.lua` and validates that every manifest path exists.
 
 ## Controls
 
@@ -85,6 +105,8 @@ The loader is not bound to a specific Roblox `UserId`; any user who can load the
 ├── Loader.lua
 ├── Manifest.lua
 ├── client.lua
+├── dist/
+│   └── client.lua
 ├── source.lua
 ├── src/
 │   ├── Main.lua

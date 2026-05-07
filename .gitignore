@@ -6,6 +6,8 @@
 .idea/
 node_modules/
 out/
-dist/
+dist/*
+!dist/
+!dist/client.lua
 build/
 tools/

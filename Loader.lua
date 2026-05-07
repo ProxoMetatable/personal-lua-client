@@ -4,8 +4,8 @@ local FETCH_RETRIES = 3
 
 local DEFAULT_MANIFEST = {
     Name = "Comet",
-    Version = "1.2.0",
-    Build = 120,
+    Version = "1.2.1",
+    Build = 121,
     Channel = "stable",
     Cache = "build",
     RequiredLoader = 2,
