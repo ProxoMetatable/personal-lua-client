@@ -17,10 +17,11 @@ The loader is not bound to a specific Roblox `UserId`; any user who can load the
 - Required modules stop boot on failure; optional modules can fail without stopping the whole client.
 - Cache busting uses the manifest build by default instead of forcing a new URL every run.
 - `source.lua` delegates to `Loader.lua` so the modular build remains the source of truth.
+- Implementation modules live under `src/`; the public loader files stay at the repository root.
 
 ## Version
 
-- `Version.lua` now stores release metadata: semantic version, build, channel, minimum loader, and changelog.
+- `src/core/Version.lua` now stores release metadata: semantic version, build, channel, minimum loader, and changelog.
 - `VersionCheck.lua` compares semantic versions and build numbers instead of plain string equality.
 - The checker reports `Latest`, `Patch Available`, `Update Available`, `Major Update`, `Build Available`, `Incompatible`, or `Unknown`.
 - Remote checks run on the manifest interval, defaulting to every 300 seconds.
@@ -61,19 +62,37 @@ The loader is not bound to a specific Roblox `UserId`; any user who can load the
 
 ## Files
 
-- `Manifest.lua` defines release metadata, module order, optional modules, and UI provider URLs.
-- `Version.lua` stores release metadata used by the checker.
 - `Loader.lua` initializes diagnostics, loads the manifest, loads modules, and starts `Main`.
-- `Config.lua` stores default settings.
-- `ConfigMigrator.lua` snapshots, applies, and migrates saved settings.
-- `Connections.lua` owns connection registration and cleanup.
-- `PlayerCache.lua` creates and removes Drawing objects per player.
-- `Targeting.lua` owns cached target selection for players and NPC-style workspace models.
-- `Overlay.lua` updates boxes, names, health bars, distances, tracers, the range circle, and the version badge.
-- `UIAdapter.lua` wraps Fluent and Rayfield.
-- `GUI.lua` builds the customization menu, profiles, keybind controls, and diagnostics.
-- `VersionCheck.lua` compares the running release to the remote latest release.
-- `Main.lua` wires lifecycle, input, player events, character events, and the render loop after Roblox camera updates.
+- `Manifest.lua` defines release metadata, module order, optional modules, and UI provider URLs.
+- `client.lua` and `source.lua` delegate to the public root loader.
+- `src/Main.lua` wires lifecycle, input, player events, character events, and the render loop after Roblox camera updates.
+- `src/core/Version.lua` stores release metadata used by the checker.
+- `src/core/Config.lua` stores default settings.
+- `src/core/ConfigMigrator.lua` snapshots, applies, and migrates saved settings.
+- `src/core/Connections.lua` owns connection registration and cleanup.
+- `src/core/VersionCheck.lua` compares the running release to the remote latest release.
+- `src/features/PlayerCache.lua` creates and removes Drawing objects per player.
+- `src/features/Targeting.lua` owns cached target selection for players and NPC-style workspace models.
+- `src/features/Overlay.lua` updates boxes, names, health bars, distances, tracers, the range circle, and the version badge.
+- `src/features/Weapons.lua` owns weapon-folder snapshot, apply, and revert behavior.
+- `src/ui/UIAdapter.lua` wraps Fluent and Rayfield.
+- `src/ui/GUI.lua` builds the customization menu, profiles, keybind controls, and diagnostics.
+
+## Repository Layout
+
+```text
+.
+├── Loader.lua
+├── Manifest.lua
+├── client.lua
+├── source.lua
+├── src/
+│   ├── Main.lua
+│   ├── core/
+│   ├── features/
+│   └── ui/
+└── scripts/
+```
 
 ## Visibility
 

@@ -10,18 +10,18 @@ local DEFAULT_MANIFEST = {
     Cache = "build",
     RequiredLoader = 2,
     Modules = {
-        {Name = "Version", Path = "Version.lua", Required = true},
-        {Name = "Config", Path = "Config.lua", Required = true},
-        {Name = "Connections", Path = "Connections.lua", Required = true},
-        {Name = "ConfigMigrator", Path = "ConfigMigrator.lua", Required = true},
-        {Name = "PlayerCache", Path = "PlayerCache.lua", Required = true},
-        {Name = "Targeting", Path = "Targeting.lua", Required = true},
-        {Name = "Weapons", Path = "Weapons.lua", Required = false},
-        {Name = "Overlay", Path = "Overlay.lua", Required = true},
-        {Name = "UIAdapter", Path = "UIAdapter.lua", Required = false},
-        {Name = "GUI", Path = "GUI.lua", Required = false},
-        {Name = "VersionCheck", Path = "VersionCheck.lua", Required = false},
-        {Name = "Main", Path = "Main.lua", Required = true},
+        {Name = "Version", Path = "src/core/Version.lua", Required = true},
+        {Name = "Config", Path = "src/core/Config.lua", Required = true},
+        {Name = "Connections", Path = "src/core/Connections.lua", Required = true},
+        {Name = "ConfigMigrator", Path = "src/core/ConfigMigrator.lua", Required = true},
+        {Name = "PlayerCache", Path = "src/features/PlayerCache.lua", Required = true},
+        {Name = "Targeting", Path = "src/features/Targeting.lua", Required = true},
+        {Name = "Weapons", Path = "src/features/Weapons.lua", Required = false},
+        {Name = "Overlay", Path = "src/features/Overlay.lua", Required = true},
+        {Name = "UIAdapter", Path = "src/ui/UIAdapter.lua", Required = false},
+        {Name = "GUI", Path = "src/ui/GUI.lua", Required = false},
+        {Name = "VersionCheck", Path = "src/core/VersionCheck.lua", Required = false},
+        {Name = "Main", Path = "src/Main.lua", Required = true},
     },
     UIProviders = {
         Fluent = "https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
@@ -246,7 +246,7 @@ local function runModule(module)
 
     context.Modules[name] = result
 
-    if name == "Version" or path == "Version.lua" then
+    if name == "Version" or path:match("Version%.lua$") then
         context.Version = result
     end
 

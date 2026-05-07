@@ -124,6 +124,18 @@ return function(context)
         return "Running " .. currentVersion .. ". Latest is " .. latestVersion .. latestBuild .. "."
     end
 
+    local function releasePath()
+        local manifest = context.Manifest
+
+        for _, module in ipairs(manifest and manifest.Modules or {}) do
+            if module.Name == "Version" and type(module.Path) == "string" then
+                return module.Path
+            end
+        end
+
+        return "src/core/Version.lua"
+    end
+
     function VersionCheck.check()
         local version = Config.Version
 
@@ -132,7 +144,7 @@ return function(context)
         end
 
         local ok, source = pcall(function()
-            return game:HttpGet(context.BaseUrl .. "Version.lua?check=" .. tostring(os.time()), true)
+            return game:HttpGet(context.BaseUrl .. releasePath() .. "?check=" .. tostring(os.time()), true)
         end)
 
         if not ok or type(source) ~= "string" or source == "" then
