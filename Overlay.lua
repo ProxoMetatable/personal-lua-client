@@ -1,6 +1,7 @@
 return function(context)
     local Players = game:GetService("Players")
     local Workspace = game:GetService("Workspace")
+    local UserInputService = game:GetService("UserInputService")
 
     local Camera = Workspace.CurrentCamera
     local LocalPlayer = Players.LocalPlayer
@@ -76,6 +77,24 @@ return function(context)
                 obj.Visible = visible
             end)
         end
+    end
+
+    local function tracerOrigin()
+        local origin = Config.Feature2.TracerOrigin or "Bottom"
+
+        if origin == "Center" then
+            return Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+        elseif origin == "Mouse" then
+            local ok, location = pcall(function()
+                return UserInputService:GetMouseLocation()
+            end)
+
+            if ok and location then
+                return Vector2.new(location.X, location.Y)
+            end
+        end
+
+        return Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
     end
 
     local function updateVersionBadge()
@@ -187,6 +206,14 @@ return function(context)
         end
 
         local col = Config.Feature2.MainColor
+        local textSize = Config.Feature2.TextSize or 13
+        local boxThickness = Config.Feature2.BoxThickness or 2
+
+        data.Box.Thickness = boxThickness
+        data.Line.Thickness = math.max(1, boxThickness - 1)
+        data.Text1.Size = textSize
+        data.Text2.Size = textSize
+        data.Text3.Size = textSize
 
         if Config.Feature2.UseTeam and player.Team == LocalPlayer.Team then
             col = Color3.fromRGB(0, 255, 0)
@@ -252,7 +279,7 @@ return function(context)
         end
 
         if Config.Feature2.Style5 then
-            data.Line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+            data.Line.From = tracerOrigin()
             data.Line.To = Vector2.new(rPos.X, rPos.Y)
             data.Line.Color = col
             data.Line.Visible = true

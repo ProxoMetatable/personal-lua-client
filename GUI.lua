@@ -1,225 +1,120 @@
 return function(context)
     local HttpService = game:GetService("HttpService")
+
     local Config = context.Config
+    local ConfigMigrator = context.ConfigMigrator
     local Weapons = context.Weapons
+    local UIAdapter = context.UIAdapter
 
     local Gui = {
         running = false,
-        Rayfield = nil,
+        UI = nil,
         Window = nil,
-        overlayEnabledToggle = nil
+        Library = nil,
+        overlayEnabledToggle = nil,
+        activeProfileInput = nil
     }
 
-    local saveFolder = "CometPrivate"
-    local saveFile = saveFolder .. "/config.json"
+    local saveRoot = "CometPrivate"
+    local legacySaveFile = saveRoot .. "/config.json"
 
     local function fileApiReady()
-        return typeof(writefile) == "function" and typeof(readfile) == "function" and typeof(isfile) == "function"
+        return typeof(writefile) == "function"
+            and typeof(readfile) == "function"
+            and typeof(isfile) == "function"
     end
 
-    local function prepareFolder()
-        if typeof(isfolder) == "function" and typeof(makefolder) == "function" and not isfolder(saveFolder) then
-            pcall(function()
-                makefolder(saveFolder)
-            end)
-        end
+    local function folderApiReady()
+        return typeof(isfolder) == "function" and typeof(makefolder) == "function"
     end
 
-    local function encodeColor(color)
-        return {
-            R = math.floor(color.R * 255 + 0.5),
-            G = math.floor(color.G * 255 + 0.5),
-            B = math.floor(color.B * 255 + 0.5)
-        }
-    end
-
-    local function decodeColor(value)
-        if type(value) ~= "table" then
-            return nil
-        end
-
-        local r = math.clamp(tonumber(value.R) or 255, 0, 255)
-        local g = math.clamp(tonumber(value.G) or 0, 0, 255)
-        local b = math.clamp(tonumber(value.B) or 0, 0, 255)
-
-        return Color3.fromRGB(r, g, b)
-    end
-
-    local function snapshot()
-        return {
-            Version = 5,
-            Feature1 = {
-                Enabled = Config.Feature1.Enabled,
-                Range = Config.Feature1.Range,
-                Speed = Config.Feature1.Speed,
-                Part = Config.Feature1.Part,
-                Check1 = Config.Feature1.Check1,
-                Check2 = Config.Feature1.Check2,
-                ScanInterval = Config.Feature1.ScanInterval,
-                MaxTargets = Config.Feature1.MaxTargets
-            },
-            Feature2 = {
-                Style1 = Config.Feature2.Style1,
-                Style2 = Config.Feature2.Style2,
-                Style3 = Config.Feature2.Style3,
-                Style4 = Config.Feature2.Style4,
-                Style5 = Config.Feature2.Style5,
-                MainColor = encodeColor(Config.Feature2.MainColor),
-                UseTeam = Config.Feature2.UseTeam
-            },
-            Feature3 = {
-                InfiniteAmmo = Config.Feature3.InfiniteAmmo,
-                ProjectileTravel = Config.Feature3.ProjectileTravel,
-                NoSpread = Config.Feature3.NoSpread,
-                NoRecoilControl = Config.Feature3.NoRecoilControl
-            },
-            UI = {
-                Enabled = Config.UI.Enabled
-            },
-            GUI = {
-                Enabled = Config.GUI.Enabled
-            }
-        }
-    end
-
-    local function saveConfig()
-        if not fileApiReady() then
-            return false
-        end
-
-        prepareFolder()
-
-        local ok = pcall(function()
-            writefile(saveFile, HttpService:JSONEncode(snapshot()))
-        end)
-
-        return ok
-    end
-
-    local function applySaved(data)
-        if type(data) ~= "table" then
+    local function ensureFolder(path)
+        if not folderApiReady() then
             return
         end
 
-        local feature1 = data.Feature1
+        local current = ""
 
-        if type(feature1) == "table" then
-            if type(feature1.Enabled) == "boolean" then
-                Config.Feature1.Enabled = feature1.Enabled
+        for segment in string.gmatch(path, "[^/]+") do
+            if current == "" then
+                current = segment
+            else
+                current = current .. "/" .. segment
             end
 
-            if type(feature1.Range) == "number" then
-                Config.Feature1.Range = math.clamp(feature1.Range, 1, 2000)
-            end
-
-            if type(feature1.Speed) == "number" then
-                Config.Feature1.Speed = math.clamp(feature1.Speed, 1, 100)
-            end
-
-            if type(feature1.Part) == "string" and feature1.Part ~= "" then
-                Config.Feature1.Part = feature1.Part
-            end
-
-            if type(feature1.Check1) == "boolean" then
-                Config.Feature1.Check1 = feature1.Check1
-            end
-
-            if type(feature1.Check2) == "boolean" then
-                Config.Feature1.Check2 = feature1.Check2
-            end
-
-            if type(feature1.ScanInterval) == "number" then
-                Config.Feature1.ScanInterval = math.clamp(feature1.ScanInterval, 0.02, 0.25)
-            end
-
-            if type(feature1.MaxTargets) == "number" then
-                Config.Feature1.MaxTargets = math.clamp(math.floor(feature1.MaxTargets), 8, 256)
+            if not isfolder(current) then
+                pcall(function()
+                    makefolder(current)
+                end)
             end
         end
-
-        local feature2 = data.Feature2
-
-        if type(feature2) == "table" then
-            if type(feature2.Style1) == "boolean" then
-                Config.Feature2.Style1 = feature2.Style1
-            end
-
-            if type(feature2.Style2) == "boolean" then
-                Config.Feature2.Style2 = feature2.Style2
-            end
-
-            if type(feature2.Style3) == "boolean" then
-                Config.Feature2.Style3 = feature2.Style3
-            end
-
-            if type(feature2.Style4) == "boolean" then
-                Config.Feature2.Style4 = feature2.Style4
-            end
-
-            if type(feature2.Style5) == "boolean" then
-                Config.Feature2.Style5 = feature2.Style5
-            end
-
-            if type(feature2.UseTeam) == "boolean" then
-                Config.Feature2.UseTeam = feature2.UseTeam
-            end
-
-            local color = decodeColor(feature2.MainColor)
-
-            if color then
-                Config.Feature2.MainColor = color
-            end
-        end
-
-        local feature3 = data.Feature3
-
-        if type(feature3) == "table" and type(feature3.InfiniteAmmo) == "boolean" then
-            Config.Feature3.InfiniteAmmo = feature3.InfiniteAmmo
-        end
-
-        if type(feature3) == "table" and type(feature3.ProjectileTravel) == "boolean" then
-            Config.Feature3.ProjectileTravel = feature3.ProjectileTravel
-        end
-
-        if type(feature3) == "table" and type(feature3.NoSpread) == "boolean" then
-            Config.Feature3.NoSpread = feature3.NoSpread
-        end
-
-        if type(feature3) == "table" and type(feature3.NoRecoilControl) == "boolean" then
-            Config.Feature3.NoRecoilControl = feature3.NoRecoilControl
-        end
-
-        if type(data.UI) == "table" and type(data.UI.Enabled) == "boolean" then
-            Config.UI.Enabled = data.UI.Enabled
-        end
-
-        if type(data.GUI) == "table" and type(data.GUI.Enabled) == "boolean" then
-            Config.GUI.Enabled = data.GUI.Enabled
-        end
-
-        Config.Feature1.Active = false
     end
 
-    local function loadConfig()
+    local function trim(value)
+        return tostring(value or ""):match("^%s*(.-)%s*$")
+    end
+
+    local function sanitizeProfileName(value)
+        local cleaned = trim(value)
+
+        if cleaned == "" then
+            cleaned = "default"
+        end
+
+        cleaned = cleaned:gsub("[^%w%-%_%. ]", "_")
+
+        if cleaned == "" then
+            cleaned = "default"
+        end
+
+        return cleaned
+    end
+
+    local function placeFolder()
+        if not Config.Profiles.PerPlace then
+            return "global"
+        end
+
+        local ok, placeId = pcall(function()
+            return tostring(game.PlaceId)
+        end)
+
+        if ok and placeId and placeId ~= "" then
+            return placeId
+        end
+
+        return "global"
+    end
+
+    local function profileFolder()
+        return (Config.Profiles.Folder or (saveRoot .. "/profiles")) .. "/" .. placeFolder()
+    end
+
+    local function profileFile(profileName)
+        return profileFolder() .. "/" .. sanitizeProfileName(profileName or Config.Profiles.Active) .. ".json"
+    end
+
+    local function readJson(path)
         if not fileApiReady() then
-            return false
+            return nil
         end
 
         local exists = false
+
         pcall(function()
-            exists = isfile(saveFile)
+            exists = isfile(path)
         end)
 
         if not exists then
-            return false
+            return nil
         end
 
         local ok, contents = pcall(function()
-            return readfile(saveFile)
+            return readfile(path)
         end)
 
         if not ok or type(contents) ~= "string" or contents == "" then
-            return false
+            return nil
         end
 
         local decodedOk, data = pcall(function()
@@ -227,11 +122,67 @@ return function(context)
         end)
 
         if decodedOk then
-            applySaved(data)
-            return true
+            return data
         end
 
-        return false
+        return nil
+    end
+
+    local function writeJson(path, data)
+        if not fileApiReady() then
+            return false
+        end
+
+        local folder = path:match("^(.*)/[^/]+$")
+
+        if folder then
+            ensureFolder(folder)
+        end
+
+        local ok = pcall(function()
+            writefile(path, HttpService:JSONEncode(data))
+        end)
+
+        return ok
+    end
+
+    local function normalizeDropdown(value)
+        if type(value) == "string" then
+            return value
+        end
+
+        if type(value) == "table" then
+            if type(value[1]) == "string" then
+                return value[1]
+            end
+
+            for key, enabled in pairs(value) do
+                if enabled then
+                    return key
+                end
+            end
+        end
+
+        return nil
+    end
+
+    local function bindingName(value)
+        if type(value) == "string" then
+            return value
+        end
+
+        local text = tostring(value or "")
+        local name = text:match("%.([^%.]+)$") or text
+
+        if name == "MouseButton1" then
+            return "MB1"
+        elseif name == "MouseButton2" then
+            return "MB2"
+        elseif name == "MouseButton3" then
+            return "MB3"
+        end
+
+        return name
     end
 
     local function hideOverlay()
@@ -240,62 +191,136 @@ return function(context)
         end
     end
 
-    function Gui.refresh()
-        if Gui.overlayEnabledToggle then
-            pcall(function()
-                Gui.overlayEnabledToggle:Set(Config.UI.Enabled)
-            end)
+    local function diagnosticSummary()
+        local diagnostics = context.Diagnostics or {}
+        local boot = diagnostics.Boot or {}
+        local runtime = diagnostics.Runtime or {}
+        local moduleCount = 0
+        local failedCount = 0
+
+        for _, status in pairs(diagnostics.Modules or {}) do
+            moduleCount += 1
+
+            if status.Status ~= "Loaded" then
+                failedCount += 1
+            end
+        end
+
+        local target = runtime.LastTarget or "none"
+        local cachedModels = runtime.CachedModels and tostring(runtime.CachedModels) or "n/a"
+        local fps = runtime.Fps and tostring(math.floor(runtime.Fps + 0.5)) or "n/a"
+        local frameMs = runtime.FrameMs and string.format("%.2f", runtime.FrameMs) or "n/a"
+        local version = Config.Version
+        local versionText = (version.Number or "0.0.0") .. " / " .. (version.Status or "Checking")
+
+        return table.concat({
+            "Boot: " .. tostring(boot.Status or "Unknown"),
+            "Modules: " .. tostring(moduleCount - failedCount) .. " loaded, " .. tostring(failedCount) .. " failed",
+            "Version: " .. versionText,
+            "UI: " .. tostring(Config.UI.Provider),
+            "Profile: " .. tostring(Config.Profiles.Active),
+            "FPS: " .. fps,
+            "Frame: " .. frameMs .. " ms",
+            "Cached models: " .. cachedModels,
+            "Target: " .. target
+        }, "\n")
+    end
+
+    local function saveConfig(profileName)
+        if not ConfigMigrator then
+            return false
+        end
+
+        local active = sanitizeProfileName(profileName or Config.Profiles.Active)
+        Config.Profiles.Active = active
+
+        local snapshot = ConfigMigrator.snapshot()
+        local ok = writeJson(profileFile(active), snapshot)
+
+        if ok then
+            writeJson(legacySaveFile, snapshot)
+        end
+
+        return ok
+    end
+
+    local function loadConfig(profileName)
+        if not ConfigMigrator then
+            return false
+        end
+
+        local active = sanitizeProfileName(profileName or Config.Profiles.Active)
+        local data = readJson(profileFile(active))
+
+        if not data and active == "default" then
+            data = readJson(legacySaveFile)
+        end
+
+        if not data then
+            return false
+        end
+
+        local applied = ConfigMigrator.apply(data)
+
+        if applied then
+            Config.Profiles.Active = active
+        end
+
+        return applied
+    end
+
+    local function syncWeapons()
+        if Weapons and Weapons.syncState then
+            Weapons.syncState()
         end
     end
 
-    function Gui.saveConfig()
-        return saveConfig()
+    local function setToggle(control, value)
+        if not control then
+            return
+        end
+
+        pcall(function()
+            if control.SetValue then
+                control:SetValue(value)
+            elseif control.Set then
+                control:Set(value)
+            end
+        end)
     end
 
-    function Gui.loadConfig()
-        return loadConfig()
+    function Gui.refresh()
+        setToggle(Gui.overlayEnabledToggle, Config.UI.Enabled)
     end
 
-    local function createInterface()
-        local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
-        local uiTitle = "Comet"
+    function Gui.saveConfig(profileName)
+        return saveConfig(profileName)
+    end
 
-        local Window = Rayfield:CreateWindow({
-            Name = uiTitle,
-            Icon = 0,
-            LoadingTitle = uiTitle,
-            LoadingSubtitle = "private client",
-            ShowText = uiTitle,
-            Theme = "Default",
-            DisableRayfieldPrompts = true,
-            DisableBuildWarnings = true,
-            ConfigurationSaving = {
-                Enabled = false,
-                FolderName = saveFolder,
-                FileName = "rayfield-disabled"
-            },
-            Discord = {
-                Enabled = false,
-                Invite = "",
-                RememberJoins = false
-            },
-            KeySystem = false
-        })
+    function Gui.loadConfig(profileName)
+        local loaded = loadConfig(profileName)
 
-        Gui.Rayfield = Rayfield
-        Gui.Window = Window
+        if loaded then
+            syncWeapons()
+            Gui.refresh()
+        end
 
-        local AimTab = Window:CreateTab("Aiming", 0)
-        local OverlayTab = Window:CreateTab("Overlay", 0)
-        local WeaponsTab = Window:CreateTab("Weapons", 0)
-        local SettingsTab = Window:CreateTab("Settings", 0)
+        return loaded
+    end
 
-        AimTab:CreateSection("Camera Assist")
-        AimTab:CreateToggle({
-            Name = "Enabled",
-            CurrentValue = Config.Feature1.Enabled,
-            Flag = "Feature1Enabled",
-            Callback = function(value)
+    function Gui.notify(title, content, duration, subContent)
+        if Gui.UI and Gui.UI.notify then
+            Gui.UI:notify(title, content, duration, subContent)
+        end
+    end
+
+    local function addAimTab(tab)
+        tab:addSection("Camera Assist")
+
+        tab:addToggle("Feature1Enabled", {
+            title = "Enabled",
+            default = Config.Feature1.Enabled,
+            callback = function(value)
                 Config.Feature1.Enabled = value
 
                 if not value then
@@ -306,39 +331,64 @@ return function(context)
             end
         })
 
-        AimTab:CreateSlider({
-            Name = "Range",
-            Range = {1, 2000},
-            Increment = 1,
-            Suffix = "px",
-            CurrentValue = Config.Feature1.Range,
-            Flag = "Feature1Range",
-            Callback = function(value)
+        tab:addDropdown("Feature1AimMode", {
+            title = "Activation Mode",
+            values = {"Hold", "Toggle", "Always"},
+            default = Config.Input.AimMode,
+            callback = function(value)
+                local selected = normalizeDropdown(value)
+
+                if selected then
+                    Config.Input.AimMode = selected
+                    Config.Feature1.AimMode = selected
+                    Config.Feature1.Active = false
+                    saveConfig()
+                end
+            end
+        })
+
+        tab:addKeybind("Feature1AimBind", {
+            title = "Activation Bind",
+            mode = "Hold",
+            default = Config.Input.AimBind,
+            changedCallback = function(value)
+                Config.Input.AimBind = bindingName(value)
+                Config.Feature1.Active = false
+                saveConfig()
+            end
+        })
+
+        tab:addSlider("Feature1Range", {
+            title = "Range",
+            min = 1,
+            max = 2000,
+            rounding = 1,
+            suffix = "px",
+            default = Config.Feature1.Range,
+            callback = function(value)
                 Config.Feature1.Range = value
                 saveConfig()
             end
         })
 
-        AimTab:CreateSlider({
-            Name = "Speed",
-            Range = {1, 100},
-            Increment = 1,
-            Suffix = "smooth",
-            CurrentValue = Config.Feature1.Speed,
-            Flag = "Feature1Speed",
-            Callback = function(value)
+        tab:addSlider("Feature1Speed", {
+            title = "Speed",
+            min = 1,
+            max = 100,
+            rounding = 1,
+            suffix = "smooth",
+            default = Config.Feature1.Speed,
+            callback = function(value)
                 Config.Feature1.Speed = value
                 saveConfig()
             end
         })
 
-        AimTab:CreateInput({
-            Name = "Target Part",
-            CurrentValue = Config.Feature1.Part,
-            PlaceholderText = "Head",
-            RemoveTextAfterFocusLost = false,
-            Flag = "Feature1Part",
-            Callback = function(text)
+        tab:addInput("Feature1Part", {
+            title = "Target Part",
+            default = Config.Feature1.Part,
+            placeholder = "Head",
+            callback = function(text)
                 if text and text ~= "" then
                     Config.Feature1.Part = text
                     saveConfig()
@@ -346,59 +396,73 @@ return function(context)
             end
         })
 
-        AimTab:CreateToggle({
-            Name = "Wall Check",
-            CurrentValue = Config.Feature1.Check1,
-            Flag = "Feature1WallCheck",
-            Callback = function(value)
+        tab:addToggle("Feature1WallCheck", {
+            title = "Wall Check",
+            default = Config.Feature1.Check1,
+            callback = function(value)
                 Config.Feature1.Check1 = value
                 saveConfig()
             end
         })
 
-        AimTab:CreateToggle({
-            Name = "Team Check",
-            CurrentValue = Config.Feature1.Check2,
-            Flag = "Feature1TeamCheck",
-            Callback = function(value)
+        tab:addToggle("Feature1TeamCheck", {
+            title = "Team Check",
+            default = Config.Feature1.Check2,
+            callback = function(value)
                 Config.Feature1.Check2 = value
                 saveConfig()
             end
         })
 
-        AimTab:CreateSection("Performance")
-        AimTab:CreateSlider({
-            Name = "Scan Rate",
-            Range = {4, 50},
-            Increment = 1,
-            Suffix = "hz",
-            CurrentValue = math.floor(1 / math.max(Config.Feature1.ScanInterval, 0.02) + 0.5),
-            Flag = "Feature1ScanRate",
-            Callback = function(value)
+        tab:addSection("Performance")
+
+        tab:addSlider("Feature1ScanRate", {
+            title = "Scan Rate",
+            min = 4,
+            max = 50,
+            rounding = 1,
+            suffix = "hz",
+            default = math.floor(1 / math.max(Config.Feature1.ScanInterval, 0.02) + 0.5),
+            callback = function(value)
                 Config.Feature1.ScanInterval = 1 / math.clamp(value, 4, 50)
                 saveConfig()
             end
         })
 
-        AimTab:CreateSlider({
-            Name = "Max Cached Targets",
-            Range = {8, 256},
-            Increment = 1,
-            Suffix = "models",
-            CurrentValue = Config.Feature1.MaxTargets,
-            Flag = "Feature1MaxTargets",
-            Callback = function(value)
+        tab:addSlider("Feature1MaxTargets", {
+            title = "Max Cached Targets",
+            min = 8,
+            max = 256,
+            rounding = 1,
+            suffix = "models",
+            default = Config.Feature1.MaxTargets,
+            callback = function(value)
                 Config.Feature1.MaxTargets = math.floor(value)
                 saveConfig()
             end
         })
 
-        OverlayTab:CreateSection("Visibility")
-        Gui.overlayEnabledToggle = OverlayTab:CreateToggle({
-            Name = "Overlay Enabled",
-            CurrentValue = Config.UI.Enabled,
-            Flag = "OverlayEnabled",
-            Callback = function(value)
+        tab:addSlider("Feature1MaxBelowLocal", {
+            title = "Max Below Local",
+            min = 10,
+            max = 2000,
+            rounding = 1,
+            suffix = "studs",
+            default = Config.Feature1.MaxBelowLocal,
+            callback = function(value)
+                Config.Feature1.MaxBelowLocal = value
+                saveConfig()
+            end
+        })
+    end
+
+    local function addOverlayTab(tab)
+        tab:addSection("Visibility")
+
+        Gui.overlayEnabledToggle = tab:addToggle("OverlayEnabled", {
+            title = "Overlay Enabled",
+            default = Config.UI.Enabled,
+            callback = function(value)
                 Config.UI.Enabled = value
 
                 if not value then
@@ -409,83 +473,129 @@ return function(context)
             end
         })
 
-        OverlayTab:CreateSection("Elements")
-        OverlayTab:CreateToggle({
-            Name = "Boxes",
-            CurrentValue = Config.Feature2.Style1,
-            Flag = "OverlayBoxes",
-            Callback = function(value)
+        tab:addKeybind("OverlayBind", {
+            title = "Overlay Toggle Bind",
+            mode = "Toggle",
+            default = Config.Input.OverlayBind,
+            changedCallback = function(value)
+                Config.Input.OverlayBind = bindingName(value)
+                saveConfig()
+            end
+        })
+
+        tab:addSection("Elements")
+
+        tab:addToggle("OverlayBoxes", {
+            title = "Boxes",
+            default = Config.Feature2.Style1,
+            callback = function(value)
                 Config.Feature2.Style1 = value
                 saveConfig()
             end
         })
 
-        OverlayTab:CreateToggle({
-            Name = "Names",
-            CurrentValue = Config.Feature2.Style2,
-            Flag = "OverlayNames",
-            Callback = function(value)
+        tab:addToggle("OverlayNames", {
+            title = "Names",
+            default = Config.Feature2.Style2,
+            callback = function(value)
                 Config.Feature2.Style2 = value
                 saveConfig()
             end
         })
 
-        OverlayTab:CreateToggle({
-            Name = "Health Bar",
-            CurrentValue = Config.Feature2.Style3,
-            Flag = "OverlayHealthBar",
-            Callback = function(value)
+        tab:addToggle("OverlayHealthBar", {
+            title = "Health Bar",
+            default = Config.Feature2.Style3,
+            callback = function(value)
                 Config.Feature2.Style3 = value
                 saveConfig()
             end
         })
 
-        OverlayTab:CreateToggle({
-            Name = "Distance",
-            CurrentValue = Config.Feature2.Style4,
-            Flag = "OverlayDistance",
-            Callback = function(value)
+        tab:addToggle("OverlayDistance", {
+            title = "Distance",
+            default = Config.Feature2.Style4,
+            callback = function(value)
                 Config.Feature2.Style4 = value
                 saveConfig()
             end
         })
 
-        OverlayTab:CreateToggle({
-            Name = "Tracer",
-            CurrentValue = Config.Feature2.Style5,
-            Flag = "OverlayTracer",
-            Callback = function(value)
+        tab:addToggle("OverlayTracer", {
+            title = "Tracer",
+            default = Config.Feature2.Style5,
+            callback = function(value)
                 Config.Feature2.Style5 = value
                 saveConfig()
             end
         })
 
-        OverlayTab:CreateToggle({
-            Name = "Team Color",
-            CurrentValue = Config.Feature2.UseTeam,
-            Flag = "OverlayTeamColor",
-            Callback = function(value)
+        tab:addToggle("OverlayTeamColor", {
+            title = "Team Color",
+            default = Config.Feature2.UseTeam,
+            callback = function(value)
                 Config.Feature2.UseTeam = value
                 saveConfig()
             end
         })
 
-        OverlayTab:CreateColorPicker({
-            Name = "Main Color",
-            Color = Config.Feature2.MainColor,
-            Flag = "OverlayMainColor",
-            Callback = function(value)
-                Config.Feature2.MainColor = value
+        tab:addColorPicker("OverlayMainColor", {
+            title = "Main Color",
+            color = Config.Feature2.MainColor,
+            callback = function(value)
+                if value then
+                    Config.Feature2.MainColor = value
+                    saveConfig()
+                end
+            end
+        })
+
+        tab:addSlider("OverlayTextSize", {
+            title = "Text Size",
+            min = 10,
+            max = 20,
+            rounding = 1,
+            default = Config.Feature2.TextSize,
+            callback = function(value)
+                Config.Feature2.TextSize = math.floor(value)
                 saveConfig()
             end
         })
 
-        WeaponsTab:CreateSection("Ammunition")
-        WeaponsTab:CreateToggle({
-            Name = "Infinite Ammo",
-            CurrentValue = Config.Feature3.InfiniteAmmo,
-            Flag = "InfiniteAmmo",
-            Callback = function(value)
+        tab:addSlider("OverlayBoxThickness", {
+            title = "Box Thickness",
+            min = 1,
+            max = 5,
+            rounding = 1,
+            default = Config.Feature2.BoxThickness,
+            callback = function(value)
+                Config.Feature2.BoxThickness = math.floor(value)
+                saveConfig()
+            end
+        })
+
+        tab:addDropdown("OverlayTracerOrigin", {
+            title = "Tracer Origin",
+            values = {"Bottom", "Center", "Mouse"},
+            default = Config.Feature2.TracerOrigin,
+            callback = function(value)
+                local selected = normalizeDropdown(value)
+
+                if selected then
+                    Config.Feature2.TracerOrigin = selected
+                    saveConfig()
+                end
+            end
+        })
+    end
+
+    local function addWeaponsTab(tab)
+        tab:addSection("Ammunition")
+
+        tab:addToggle("InfiniteAmmo", {
+            title = "Infinite Ammo",
+            default = Config.Feature3.InfiniteAmmo,
+            callback = function(value)
                 Config.Feature3.InfiniteAmmo = value
 
                 if Weapons and Weapons.setEnabled then
@@ -495,11 +605,11 @@ return function(context)
                 saveConfig()
             end
         })
-        WeaponsTab:CreateToggle({
-            Name = "Projectile's Travel Instantly",
-            CurrentValue = Config.Feature3.ProjectileTravel,
-            Flag = "ProjectileTravel",
-            Callback = function(value)
+
+        tab:addToggle("ProjectileTravel", {
+            title = "Projectile Travel Instantly",
+            default = Config.Feature3.ProjectileTravel,
+            callback = function(value)
                 Config.Feature3.ProjectileTravel = value
 
                 if Weapons and Weapons.setEnabled then
@@ -509,11 +619,11 @@ return function(context)
                 saveConfig()
             end
         })
-        WeaponsTab:CreateToggle({
-            Name = "No Spread",
-            CurrentValue = Config.Feature3.NoSpread,
-            Flag = "NoSpread",
-            Callback = function(value)
+
+        tab:addToggle("NoSpread", {
+            title = "No Spread",
+            default = Config.Feature3.NoSpread,
+            callback = function(value)
                 Config.Feature3.NoSpread = value
 
                 if Weapons and Weapons.setEnabled then
@@ -523,11 +633,11 @@ return function(context)
                 saveConfig()
             end
         })
-        WeaponsTab:CreateToggle({
-            Name = "No Recoil",
-            CurrentValue = Config.Feature3.NoRecoilControl,
-            Flag = "NoRecoilControl",
-            Callback = function(value)
+
+        tab:addToggle("NoRecoilControl", {
+            title = "No Recoil",
+            default = Config.Feature3.NoRecoilControl,
+            callback = function(value)
                 Config.Feature3.NoRecoilControl = value
 
                 if Weapons and Weapons.setEnabled then
@@ -537,25 +647,137 @@ return function(context)
                 saveConfig()
             end
         })
+    end
 
-        SettingsTab:CreateSection("Interface")
-        SettingsTab:CreateButton({
-            Name = "Save Settings",
-            Callback = function()
+    local function addSettingsTab(tab)
+        tab:addSection("Profiles")
+
+        Gui.activeProfileInput = tab:addInput("ProfileName", {
+            title = "Profile Name",
+            default = Config.Profiles.Active,
+            placeholder = "default",
+            callback = function(value)
+                Config.Profiles.Active = sanitizeProfileName(value)
+            end
+        })
+
+        tab:addToggle("ProfilesPerPlace", {
+            title = "Per-Place Profiles",
+            default = Config.Profiles.PerPlace,
+            callback = function(value)
+                Config.Profiles.PerPlace = value
                 saveConfig()
             end
         })
 
-        SettingsTab:CreateButton({
-            Name = "Hide Menu",
-            Callback = function()
-                Rayfield:SetVisibility(false)
+        tab:addButton({
+            title = "Save Profile",
+            description = "Writes the active settings to the selected profile.",
+            callback = function()
+                if saveConfig(Config.Profiles.Active) then
+                    Gui.notify("Comet", "Saved profile " .. Config.Profiles.Active .. ".", 4)
+                else
+                    Gui.notify("Comet", "Profile save failed.", 4)
+                end
             end
         })
 
-        SettingsTab:CreateButton({
-            Name = "Stop Client",
-            Callback = function()
+        tab:addButton({
+            title = "Load Profile",
+            description = "Applies settings from the selected profile.",
+            callback = function()
+                if Gui.loadConfig(Config.Profiles.Active) then
+                    Gui.notify("Comet", "Loaded profile " .. Config.Profiles.Active .. ".", 4)
+                else
+                    Gui.notify("Comet", "Profile not found.", 4)
+                end
+            end
+        })
+
+        tab:addSection("Interface")
+
+        tab:addDropdown("UIProvider", {
+            title = "UI Provider",
+            values = {"Fluent", "Rayfield"},
+            default = Config.UI.Provider,
+            callback = function(value)
+                local selected = normalizeDropdown(value)
+
+                if selected then
+                    Config.UI.Provider = selected
+                    saveConfig()
+                    Gui.notify("Comet", "Restart the client to apply " .. selected .. ".", 5)
+                end
+            end
+        })
+
+        tab:addInput("UITheme", {
+            title = "Theme",
+            default = Config.UI.Theme,
+            placeholder = "Dark",
+            callback = function(value)
+                if value and value ~= "" then
+                    Config.UI.Theme = value
+                    saveConfig()
+                end
+            end
+        })
+
+        tab:addToggle("UIAcrylic", {
+            title = "Acrylic",
+            default = Config.UI.Acrylic,
+            callback = function(value)
+                Config.UI.Acrylic = value
+                saveConfig()
+                Gui.notify("Comet", "Restart the client to apply acrylic changes.", 4)
+            end
+        })
+
+        tab:addToggle("UITransparency", {
+            title = "Transparency",
+            default = Config.UI.Transparency,
+            callback = function(value)
+                Config.UI.Transparency = value
+                saveConfig()
+                Gui.notify("Comet", "Restart the client to apply transparency changes.", 4)
+            end
+        })
+
+        tab:addKeybind("MenuBind", {
+            title = "Menu Bind",
+            mode = "Toggle",
+            default = Config.Input.MenuBind,
+            changedCallback = function(value)
+                Config.Input.MenuBind = bindingName(value)
+                saveConfig()
+                Gui.notify("Comet", "Restart the client to apply the menu bind.", 4)
+            end
+        })
+
+        tab:addKeybind("PanicBind", {
+            title = "Panic Stop Bind",
+            mode = "Toggle",
+            default = Config.Input.PanicBind,
+            changedCallback = function(value)
+                Config.Input.PanicBind = bindingName(value)
+                saveConfig()
+            end
+        })
+
+        tab:addButton({
+            title = "Hide Menu",
+            callback = function()
+                if Gui.Library and Gui.Library.SetVisibility then
+                    Gui.Library:SetVisibility(false)
+                else
+                    Gui.notify("Comet", "Use " .. tostring(Config.Input.MenuBind) .. " to minimize the menu.", 4)
+                end
+            end
+        })
+
+        tab:addButton({
+            title = "Stop Client",
+            callback = function()
                 if context.Main and context.Main.stop then
                     context.Main.stop()
                 end
@@ -563,32 +785,120 @@ return function(context)
         })
     end
 
+    local function addDiagnosticsTab(tab)
+        tab:addSection("Status")
+
+        tab:addParagraph({
+            title = "Snapshot",
+            content = diagnosticSummary()
+        })
+
+        tab:addButton({
+            title = "Show Diagnostics",
+            description = "Displays the current boot and runtime state.",
+            callback = function()
+                Gui.notify("Comet Diagnostics", diagnosticSummary(), 8)
+            end
+        })
+
+        tab:addButton({
+            title = "Check Version",
+            callback = function()
+                if context.VersionCheck and context.VersionCheck.check then
+                    local status = context.VersionCheck.check()
+                    Gui.notify("Comet", "Version status: " .. tostring(status), 5)
+                else
+                    Gui.notify("Comet", "Version checker is unavailable.", 4)
+                end
+            end
+        })
+    end
+
+    local function createInterface()
+        if not UIAdapter then
+            Gui.notify("Comet", "UI adapter is unavailable.", 4)
+            return
+        end
+
+        local version = Config.Version
+        local ui = UIAdapter.createWindow({
+            title = Config.Name,
+            subtitle = (version.Number or "0.0.0") .. " / " .. (version.Channel or "stable")
+        })
+
+        if not ui then
+            warn("Comet GUI: failed to create UI")
+            return
+        end
+
+        Gui.UI = ui
+        Gui.Window = ui.Window
+        Gui.Library = ui.Library
+
+        local aimTab = ui:addTab("Aim", "Aiming", "crosshair")
+        local overlayTab = ui:addTab("Overlay", "Overlay", "scan")
+        local weaponsTab = ui:addTab("Weapons", "Weapons", "target")
+        local settingsTab = ui:addTab("Settings", "Settings", "settings")
+        local diagnosticsTab = ui:addTab("Diagnostics", "Diagnostics", "activity")
+
+        addAimTab(aimTab)
+        addOverlayTab(overlayTab)
+        addWeaponsTab(weaponsTab)
+        addSettingsTab(settingsTab)
+        addDiagnosticsTab(diagnosticsTab)
+
+        ui:selectTab(1)
+        Gui.notify("Comet", "Loaded with " .. tostring(ui.Provider) .. ".", 5)
+    end
+
     function Gui.start()
         if Gui.running or not Config.GUI.Enabled then
             return Gui
         end
 
-        loadConfig()
+        loadConfig(Config.Profiles.Active)
         Gui.running = true
-        createInterface()
-        saveConfig()
+
+        local ok, err = pcall(createInterface)
+
+        if not ok then
+            Gui.running = false
+
+            if Gui.UI and Gui.UI.destroy then
+                pcall(function()
+                    Gui.UI:destroy()
+                end)
+            end
+
+            Gui.UI = nil
+            Gui.Window = nil
+            Gui.Library = nil
+
+            if Config.Diagnostics then
+                Config.Diagnostics.LastMessage = "GUI failed: " .. tostring(err)
+            end
+            warn("Comet GUI: " .. tostring(err))
+            return Gui
+        end
+
+        saveConfig(Config.Profiles.Active)
 
         return Gui
     end
 
     function Gui.destroy()
         Config.Feature1.Active = false
-        saveConfig()
+        saveConfig(Config.Profiles.Active)
 
-        if Gui.Rayfield and Gui.Rayfield.Destroy then
-            pcall(function()
-                Gui.Rayfield:Destroy()
-            end)
+        if Gui.UI and Gui.UI.destroy then
+            Gui.UI:destroy()
         end
 
-        Gui.Rayfield = nil
+        Gui.UI = nil
         Gui.Window = nil
+        Gui.Library = nil
         Gui.overlayEnabledToggle = nil
+        Gui.activeProfileInput = nil
         Gui.running = false
 
         return Gui

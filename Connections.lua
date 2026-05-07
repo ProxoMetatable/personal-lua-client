@@ -13,7 +13,14 @@ return function(context)
         local connection = Connections.items[name]
 
         if connection then
-            connection:Disconnect()
+            if typeof(connection) == "RBXScriptConnection" or typeof(connection) == "table" then
+                pcall(function()
+                    connection:Disconnect()
+                end)
+            elseif type(connection) == "function" then
+                pcall(connection)
+            end
+
             Connections.items[name] = nil
         end
     end

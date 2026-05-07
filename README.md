@@ -8,47 +8,72 @@ A modular Lua client layout designed to be loaded from raw GitHub URLs.
 local client = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProxoMetatable/personal-lua-client/main/Loader.lua", true))()
 ```
 
-The loader only starts for `UserId == 1871025207`. Other users receive a disabled context and no modules are loaded.
+The loader is not bound to a specific Roblox `UserId`; any user who can load the raw URL can start the client.
+
+## Loader
+
+- `Loader.lua` fetches `Manifest.lua`, checks the required loader version, then loads modules in manifest order.
+- Module fetch/load/start failures are recorded in `context.Diagnostics.Modules`.
+- Required modules stop boot on failure; optional modules can fail without stopping the whole client.
+- Cache busting uses the manifest build by default instead of forcing a new URL every run.
+- `source.lua` delegates to `Loader.lua` so the modular build remains the source of truth.
 
 ## Version
 
-- A small top-right badge shows `Comet - version - Latest/Old`.
-- The badge starts as `Checking` and updates after fetching `Version.lua`.
-- Rayfield shows a notification with the current/latest version when `Rayfield:Notify` is available.
+- `Version.lua` now stores release metadata: semantic version, build, channel, minimum loader, and changelog.
+- `VersionCheck.lua` compares semantic versions and build numbers instead of plain string equality.
+- The checker reports `Latest`, `Patch Available`, `Update Available`, `Major Update`, `Build Available`, `Incompatible`, or `Unknown`.
+- Remote checks run on the manifest interval, defaulting to every 300 seconds.
+
+## Interface
+
+- Fluent is the preferred UI provider, loaded from `https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua`.
+- Rayfield remains available as a fallback provider.
+- `UIAdapter.lua` keeps `GUI.lua` from depending directly on one UI library.
+- The Settings tab can switch the saved UI provider; restart the client after changing providers.
+
+## Profiles
+
+- Settings are saved through `ConfigMigrator.lua`.
+- Profiles live under `CometPrivate/profiles/<PlaceId>/<profile>.json` when per-place profiles are enabled.
+- A legacy copy is still written to `CometPrivate/config.json` for compatibility.
+- Config version `6` adds saved keybinds, UI provider settings, profile settings, diagnostics settings, and the `MaxBelowLocal` value.
 
 ## Controls
 
-- Hold right click to activate the aimbot.
-- Release right click to stop the aimbot.
-- `Insert` toggles the overlay.
-- Rayfield handles the window UI normally.
-- Settings autosave to `CometPrivate/config.json` without saving or loading custom binds.
+- Aim activation supports `Hold`, `Toggle`, and `Always` modes.
+- Default aim bind is `MB2`.
+- Default overlay toggle bind is `Insert`.
+- Default menu bind is `RightShift`.
+- Default panic stop bind is `End`.
 
-## Target Safety
+## Overlay
 
-- Locked targets are revalidated before camera movement.
-- Dead humanoids, dead humanoid states, and off-FOV targets are dropped instantly.
-- Targets more than `MaxBelowLocal` studs below the local character on the Y axis are skipped and cannot stay locked.
-- `MaxBelowLocal` defaults to `220` in `Config.lua`.
+- The overlay supports boxes, names, health bars, distances, tracers, range circle, and version badge.
+- Text size, box thickness, tracer origin, team color use, and main color are saved in profiles.
+- Tracer origin can be `Bottom`, `Center`, or `Mouse`.
 
-## Performance
+## Diagnostics
 
-- NPC-style workspace models are cached instead of discovered with `Workspace:GetDescendants()` every frame.
-- Target scans are throttled by the Scan Rate setting while camera smoothing still runs every frame.
-- Max Cached Targets limits how many cached models are evaluated per scan.
+- Loader/module status is stored in `context.Diagnostics`.
+- Runtime diagnostics track FPS, frame time, overlay time, targeting time, cached model count, active state, and current target.
+- The Diagnostics tab can show the current runtime snapshot and manually trigger a version check.
 
 ## Files
 
-- `Version.lua` stores the latest version number.
-- `Loader.lua` authorizes the local player and loads every module in order.
-- `Config.lua` stores shared settings and runtime version state.
+- `Manifest.lua` defines release metadata, module order, optional modules, and UI provider URLs.
+- `Version.lua` stores release metadata used by the checker.
+- `Loader.lua` initializes diagnostics, loads the manifest, loads modules, and starts `Main`.
+- `Config.lua` stores default settings.
+- `ConfigMigrator.lua` snapshots, applies, and migrates saved settings.
 - `Connections.lua` owns connection registration and cleanup.
 - `PlayerCache.lua` creates and removes Drawing objects per player.
 - `Targeting.lua` owns cached target selection for players and NPC-style workspace models.
 - `Overlay.lua` updates boxes, names, health bars, distances, tracers, the range circle, and the version badge.
-- `GUI.lua` builds the Rayfield customization menu and owns Comet config saving.
-- `VersionCheck.lua` compares the running version to the remote latest version and sends Rayfield notifications.
-- `Main.lua` wires services, fixed input controls, GUI lifecycle, player lifecycle, character lifecycle, version check startup, and the render loop after Roblox camera updates.
+- `UIAdapter.lua` wraps Fluent and Rayfield.
+- `GUI.lua` builds the customization menu, profiles, keybind controls, and diagnostics.
+- `VersionCheck.lua` compares the running release to the remote latest release.
+- `Main.lua` wires lifecycle, input, player events, character events, and the render loop after Roblox camera updates.
 
 ## Visibility
 

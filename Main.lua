@@ -26,30 +26,120 @@ return function(context)
         end
     end
 
-    local function rightClickDown()
+    local function focusedTextBox()
         local ok, result = pcall(function()
-            return UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+            return UserInputService:GetFocusedTextBox()
         end)
 
-        return ok and result
+        return ok and result ~= nil
     end
 
-    local function syncAimHold()
-        if Config.Feature1.Enabled then
-            Config.Feature1.Active = rightClickDown()
-        else
+    local function keyCodeFromName(name)
+        if type(name) ~= "string" or name == "" then
+            return nil
+        end
+
+        local ok, keyCode = pcall(function()
+            return Enum.KeyCode[name]
+        end)
+
+        if ok then
+            return keyCode
+        end
+
+        return nil
+    end
+
+    local function mouseInputFromBind(bind)
+        if bind == "MB1" or bind == "MouseButton1" then
+            return Enum.UserInputType.MouseButton1
+        elseif bind == "MB2" or bind == "MouseButton2" then
+            return Enum.UserInputType.MouseButton2
+        elseif bind == "MB3" or bind == "MouseButton3" then
+            return Enum.UserInputType.MouseButton3
+        end
+
+        return nil
+    end
+
+    local function inputMatches(input, bind)
+        local mouseInput = mouseInputFromBind(bind)
+
+        if mouseInput then
+            return input.UserInputType == mouseInput
+        end
+
+        local keyCode = keyCodeFromName(bind)
+
+        return keyCode ~= nil and input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == keyCode
+    end
+
+    local function bindingDown(bind)
+        local mouseInput = mouseInputFromBind(bind)
+
+        if mouseInput then
+            local ok, result = pcall(function()
+                return UserInputService:IsMouseButtonPressed(mouseInput)
+            end)
+
+            return ok and result
+        end
+
+        local keyCode = keyCodeFromName(bind)
+
+        if keyCode then
+            local ok, result = pcall(function()
+                return UserInputService:IsKeyDown(keyCode)
+            end)
+
+            return ok and result
+        end
+
+        return false
+    end
+
+    local function currentAimMode()
+        local mode = Config.Input and Config.Input.AimMode or Config.Feature1.AimMode or "Hold"
+
+        if mode ~= "Hold" and mode ~= "Toggle" and mode ~= "Always" then
+            mode = "Hold"
+        end
+
+        Config.Feature1.AimMode = mode
+
+        return mode
+    end
+
+    local function clearTarget()
+        if Targeting then
+            Targeting.current = nil
+        end
+    end
+
+    local function syncAimState()
+        if not Config.Feature1.Enabled then
             Config.Feature1.Active = false
+            clearTarget()
+            return
+        end
+
+        local mode = currentAimMode()
+
+        if mode == "Always" then
+            Config.Feature1.Active = true
+        elseif mode == "Hold" then
+            Config.Feature1.Active = bindingDown(Config.Input.AimBind)
         end
 
         if not Config.Feature1.Active then
-            Targeting.current = nil
+            clearTarget()
         end
     end
 
     local function toggleOverlay()
         Config.UI.Enabled = not Config.UI.Enabled
 
-        if not Config.UI.Enabled then
+        if not Config.UI.Enabled and Overlay then
             Overlay.hideAll()
         end
 
@@ -60,23 +150,117 @@ return function(context)
         saveConfig()
     end
 
+    local function describeTarget(target)
+        if not target then
+            return "none"
+        end
+
+        if target.Player then
+            return target.Player.Name
+        end
+
+        if target.Character then
+            return target.Character.Name
+        end
+
+        return "unknown"
+    end
+
+    local function updateRuntimeDiagnostics(startedAt, overlayStartedAt, overlayFinishedAt, targetStartedAt, targetFinishedAt, target)
+        local diagnostics = context.Diagnostics
+
+        if not diagnostics then
+            return
+        end
+
+        local runtime = diagnostics.Runtime or {}
+        diagnostics.Runtime = runtime
+
+        local finishedAt = os.clock()
+        local lastFrameAt = runtime.LastFrameAt
+
+        if lastFrameAt and finishedAt > lastFrameAt then
+            runtime.Fps = 1 / (finishedAt - lastFrameAt)
+        end
+
+        runtime.LastFrameAt = finishedAt
+        runtime.FrameMs = (finishedAt - startedAt) * 1000
+        runtime.OverlayMs = overlayFinishedAt and overlayStartedAt and (overlayFinishedAt - overlayStartedAt) * 1000 or 0
+        runtime.TargetingMs = targetFinishedAt and targetStartedAt and (targetFinishedAt - targetStartedAt) * 1000 or 0
+        runtime.LastTarget = describeTarget(target)
+        runtime.CachedModels = Targeting and Targeting.models and #Targeting.models or 0
+        runtime.AimActive = Config.Feature1.Active
+        runtime.OverlayEnabled = Config.UI.Enabled
+    end
+
+    local function panicStop()
+        Config.Feature1.Active = false
+        clearTarget()
+
+        if Main.stop then
+            Main.stop()
+        end
+    end
+
     local function onInputBegan(input)
-        if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.Insert then
+        if focusedTextBox() then
+            return
+        end
+
+        if Config.Input and inputMatches(input, Config.Input.OverlayBind) then
             toggleOverlay()
+            return
+        end
+
+        if Config.Input and inputMatches(input, Config.Input.PanicBind) then
+            panicStop()
+            return
+        end
+
+        if Config.Input and inputMatches(input, Config.Input.AimBind) then
+            local mode = currentAimMode()
+
+            if mode == "Toggle" then
+                Config.Feature1.Active = not Config.Feature1.Active
+
+                if not Config.Feature1.Active then
+                    clearTarget()
+                end
+            elseif mode == "Hold" then
+                Config.Feature1.Active = true
+            end
         end
     end
 
     local function onInputEnded(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        if Config.Input and inputMatches(input, Config.Input.AimBind) and currentAimMode() == "Hold" then
             Config.Feature1.Active = false
-            Targeting.current = nil
+            clearTarget()
         end
     end
 
     local function step()
-        syncAimHold()
-        Overlay.updateAll()
-        Targeting.update()
+        local startedAt = os.clock()
+
+        syncAimState()
+
+        local overlayStartedAt = os.clock()
+
+        if Overlay and Overlay.updateAll then
+            Overlay.updateAll()
+        end
+
+        local overlayFinishedAt = os.clock()
+        local targetStartedAt = os.clock()
+        local target = nil
+
+        if Targeting and Targeting.update then
+            target = Targeting.update()
+        end
+
+        local targetFinishedAt = os.clock()
+
+        updateRuntimeDiagnostics(startedAt, overlayStartedAt, overlayFinishedAt, targetStartedAt, targetFinishedAt, target)
     end
 
     local function bindRenderStep()
@@ -107,7 +291,10 @@ return function(context)
         end
 
         Main.running = true
-        PlayerCache.setupAll()
+
+        if PlayerCache and PlayerCache.setupAll then
+            PlayerCache.setupAll()
+        end
 
         if Targeting and Targeting.start then
             Targeting.start()
@@ -132,10 +319,14 @@ return function(context)
         Connections.add("InputBegan", UserInputService.InputBegan:Connect(onInputBegan))
         Connections.add("InputEnded", UserInputService.InputEnded:Connect(onInputEnded))
         Connections.add("PlayerAdded", Players.PlayerAdded:Connect(function(player)
-            PlayerCache.setup(player)
+            if PlayerCache and PlayerCache.setup then
+                PlayerCache.setup(player)
+            end
         end))
         Connections.add("PlayerRemoving", Players.PlayerRemoving:Connect(function(player)
-            PlayerCache.remove(player)
+            if PlayerCache and PlayerCache.remove then
+                PlayerCache.remove(player)
+            end
         end))
         Connections.add("CharacterAdded", LocalPlayer.CharacterAdded:Connect(function(character)
             context.LocalCharacter = character
@@ -152,7 +343,7 @@ return function(context)
 
         Main.running = false
         Config.Feature1.Active = false
-        Targeting.current = nil
+        clearTarget()
 
         if Gui and Gui.destroy then
             Gui.destroy()
@@ -172,8 +363,13 @@ return function(context)
             VersionCheck.stop()
         end
 
-        Overlay.hideAll()
-        PlayerCache.clear()
+        if Overlay and Overlay.hideAll then
+            Overlay.hideAll()
+        end
+
+        if PlayerCache and PlayerCache.clear then
+            PlayerCache.clear()
+        end
 
         return Main
     end

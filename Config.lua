@@ -1,12 +1,24 @@
 return function(context)
-    local version = context.Version or {Number = "1.1.8"}
+    local release = context.Version or {}
+    local manifest = context.Manifest or {}
+    local versionNumber = release.Version or release.Number or manifest.Version or "1.2.0"
 
     local Config = {
-        Name = "Comet - Private",
+        Name = "Comet",
         Version = {
-            Number = version.Number or "1.1.8",
+            Number = versionNumber,
             Latest = nil,
-            Status = "Checking"
+            Build = tonumber(release.Build) or tonumber(manifest.Build) or 120,
+            LatestBuild = nil,
+            Channel = release.Channel or manifest.Channel or "stable",
+            Status = "Checking",
+            Severity = "Unknown",
+            Changelog = release.Changelog or {},
+            CheckInterval = tonumber(manifest.CheckInterval) or 300
+        },
+        Loader = {
+            Version = context.LoaderVersion or 1,
+            Status = context.Diagnostics and context.Diagnostics.Boot and context.Diagnostics.Boot.Status or "Booting"
         },
         Feature1 = {
             Enabled = true,
@@ -18,7 +30,8 @@ return function(context)
             Check2 = true,
             ScanInterval = 0.05,
             MaxTargets = 64,
-            MaxBelowLocal = 220
+            MaxBelowLocal = 220,
+            AimMode = "Hold"
         },
         Feature2 = {
             Style1 = true,
@@ -27,7 +40,10 @@ return function(context)
             Style4 = true,
             Style5 = true,
             MainColor = Color3.fromRGB(255, 0, 0),
-            UseTeam = true
+            UseTeam = true,
+            TextSize = 13,
+            BoxThickness = 2,
+            TracerOrigin = "Bottom"
         },
         Feature3 = {
             InfiniteAmmo = false,
@@ -35,11 +51,32 @@ return function(context)
             NoSpread = false,
             NoRecoilControl = false
         },
+        Input = {
+            AimBind = "MB2",
+            AimMode = "Hold",
+            OverlayBind = "Insert",
+            MenuBind = "RightShift",
+            PanicBind = "End"
+        },
         UI = {
-            Enabled = true
+            Enabled = true,
+            Provider = "Fluent",
+            Theme = "Dark",
+            Acrylic = false,
+            Transparency = false
         },
         GUI = {
             Enabled = true
+        },
+        Profiles = {
+            Active = "default",
+            PerPlace = true,
+            Folder = "CometPrivate/profiles"
+        },
+        Diagnostics = {
+            Enabled = true,
+            ShowBootStatus = true,
+            LastMessage = ""
         }
     }
 
