@@ -1,6 +1,8 @@
 return function(context)
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
+    local Compatibility = context.Compatibility
+    local drawingReady = Compatibility == nil or Compatibility.supports("Drawing")
 
     local PlayerCache = {
         players = {}
@@ -19,11 +21,20 @@ return function(context)
     end
 
     local function createDrawing(kind)
-        return Drawing.new(kind)
+        local ok, drawing = pcall(function()
+            return Drawing.new(kind)
+        end)
+
+        if ok then
+            return drawing
+        end
+
+        drawingReady = false
+        return nil
     end
 
     function PlayerCache.setup(player)
-        if player == LocalPlayer then
+        if player == LocalPlayer or not drawingReady then
             return nil
         end
 
@@ -40,6 +51,11 @@ return function(context)
             Line = createDrawing("Line"),
             Lines = {}
         }
+
+        if not items.Box or not items.Text1 or not items.Bar or not items.Text2 or not items.Text3 or not items.Line then
+            removeDrawing(items)
+            return nil
+        end
 
         items.Box.Thickness = 2
         items.Box.Transparency = 1

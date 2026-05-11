@@ -1,7 +1,7 @@
 return {
-    Number = "1.2.2",
-    Version = "1.2.2",
-    Build = 122,
+    Number = "1.2.3",
+    Version = "1.2.3",
+    Build = 123,
     Channel = "stable",
     MinLoader = 2,
     Changelog = {
@@ -13,6 +13,7 @@ return {
         "Added production bundle output",
         "Fixed Drawing coordinate inset alignment",
         "Added render-step error throttling",
-        "Throttled ESP updates independently from aimbot updates"
+        "Throttled ESP updates independently from aimbot updates",
+        "Added executor compatibility preflight checks"
     }
 }

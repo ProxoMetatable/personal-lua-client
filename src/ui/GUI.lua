@@ -201,12 +201,19 @@ return function(context)
         local runtime = diagnostics.Runtime or {}
         local moduleCount = 0
         local failedCount = 0
+        local disabledCount = 0
 
         for _, status in pairs(diagnostics.Modules or {}) do
             moduleCount += 1
 
             if status.Status ~= "Loaded" then
                 failedCount += 1
+            end
+        end
+
+        if context.Compatibility then
+            for _ in pairs(context.Compatibility.Disabled) do
+                disabledCount += 1
             end
         end
 
@@ -223,6 +230,7 @@ return function(context)
             "Version: " .. versionText,
             "UI: " .. tostring(Config.UI.Provider),
             "Profile: " .. tostring(Config.Profiles.Active),
+            "Disabled features: " .. tostring(disabledCount),
             "FPS: " .. fps,
             "Frame: " .. frameMs .. " ms",
             "Cached models: " .. cachedModels,
@@ -879,6 +887,20 @@ return function(context)
             description = "Displays the current boot and runtime state.",
             callback = function()
                 Gui.notify("Comet Diagnostics", diagnosticSummary(), 8)
+            end
+        })
+
+        tab:addButton({
+            title = "Show Compatibility",
+            description = "Displays executor capability checks.",
+            callback = function()
+                local compatibility = context.Compatibility
+
+                if compatibility and compatibility.report then
+                    Gui.notify("Comet Compatibility", compatibility.report(), 10)
+                else
+                    Gui.notify("Comet Compatibility", "Compatibility module is unavailable.", 5)
+                end
             end
         })
 

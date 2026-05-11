@@ -4,8 +4,8 @@ local FETCH_RETRIES = 3
 
 local DEFAULT_MANIFEST = {
     Name = "Comet",
-    Version = "1.2.2",
-    Build = 122,
+    Version = "1.2.3",
+    Build = 123,
     Channel = "stable",
     Cache = "build",
     RequiredLoader = 2,
@@ -13,6 +13,7 @@ local DEFAULT_MANIFEST = {
         {Name = "Version", Path = "src/core/Version.lua", Required = true},
         {Name = "Config", Path = "src/core/Config.lua", Required = true},
         {Name = "Connections", Path = "src/core/Connections.lua", Required = true},
+        {Name = "Compatibility", Path = "src/core/Compatibility.lua", Required = true},
         {Name = "ConfigMigrator", Path = "src/core/ConfigMigrator.lua", Required = true},
         {Name = "PlayerCache", Path = "src/features/PlayerCache.lua", Required = true},
         {Name = "Targeting", Path = "src/features/Targeting.lua", Required = true},

@@ -137,6 +137,18 @@ return function(context)
     end
 
     function VersionCheck.check()
+        local compatibility = context.Compatibility
+
+        if compatibility and (not compatibility.supports("HttpGet") or not compatibility.supports("Loadstring")) then
+            if Config.Version then
+                Config.Version.Status = "Unknown"
+                Config.Version.Severity = "Compatibility"
+            end
+
+            VersionCheck.lastError = "HttpGet/loadstring support is incomplete"
+            return Config.Version and Config.Version.Status or nil
+        end
+
         local version = Config.Version
 
         if not version then
@@ -177,6 +189,13 @@ return function(context)
 
     function VersionCheck.start()
         if VersionCheck.running then
+            return VersionCheck
+        end
+
+        local compatibility = context.Compatibility
+
+        if compatibility and (not compatibility.supports("HttpGet") or not compatibility.supports("Loadstring")) then
+            VersionCheck.check()
             return VersionCheck
         end
 

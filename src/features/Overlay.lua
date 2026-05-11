@@ -7,6 +7,24 @@ return function(context)
     local Camera = Workspace.CurrentCamera
     local LocalPlayer = Players.LocalPlayer
     local Config = context.Config
+    local Compatibility = context.Compatibility
+
+    if Compatibility and not Compatibility.supports("Drawing") then
+        local Overlay = {
+            drawings = {}
+        }
+
+        function Overlay.setVisible() end
+        function Overlay.hidePlayer() end
+        function Overlay.hideAll() end
+        function Overlay.updateCircle() end
+        function Overlay.updatePlayer() end
+        function Overlay.updateAll() end
+
+        context.Overlay = Overlay
+
+        return Overlay
+    end
 
     local Overlay = {
         drawings = {}

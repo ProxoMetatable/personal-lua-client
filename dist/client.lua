@@ -7,8 +7,8 @@ local BUNDLED_SOURCES = {
     ["Manifest.lua"] = [[
 return {
     Name = "Comet",
-    Version = "1.2.2",
-    Build = 122,
+    Version = "1.2.3",
+    Build = 123,
     Channel = "stable",
     Cache = "build",
     RequiredLoader = 2,
@@ -17,6 +17,7 @@ return {
         {Name = "Version", Path = "src/core/Version.lua", Required = true},
         {Name = "Config", Path = "src/core/Config.lua", Required = true},
         {Name = "Connections", Path = "src/core/Connections.lua", Required = true},
+        {Name = "Compatibility", Path = "src/core/Compatibility.lua", Required = true},
         {Name = "ConfigMigrator", Path = "src/core/ConfigMigrator.lua", Required = true},
         {Name = "PlayerCache", Path = "src/features/PlayerCache.lua", Required = true},
         {Name = "Targeting", Path = "src/features/Targeting.lua", Required = true},
@@ -36,9 +37,9 @@ return {
 ]],
     ["src/core/Version.lua"] = [[
 return {
-    Number = "1.2.2",
-    Version = "1.2.2",
-    Build = 122,
+    Number = "1.2.3",
+    Version = "1.2.3",
+    Build = 123,
     Channel = "stable",
     MinLoader = 2,
     Changelog = {
@@ -50,7 +51,8 @@ return {
         "Added production bundle output",
         "Fixed Drawing coordinate inset alignment",
         "Added render-step error throttling",
-        "Throttled ESP updates independently from aimbot updates"
+        "Throttled ESP updates independently from aimbot updates",
+        "Added executor compatibility preflight checks"
     }
 }
 
@@ -59,14 +61,14 @@ return {
 return function(context)
     local release = context.Version or {}
     local manifest = context.Manifest or {}
-    local versionNumber = release.Version or release.Number or manifest.Version or "1.2.2"
+    local versionNumber = release.Version or release.Number or manifest.Version or "1.2.3"
 
     local Config = {
         Name = "Comet",
         Version = {
             Number = versionNumber,
             Latest = nil,
-            Build = tonumber(release.Build) or tonumber(manifest.Build) or 122,
+            Build = tonumber(release.Build) or tonumber(manifest.Build) or 123,
             LatestBuild = nil,
             Channel = release.Channel or manifest.Channel or "stable",
             Status = "Checking",
@@ -183,6 +185,258 @@ return function(context)
     context.Connections = Connections
 
     return Connections
+end
+
+]],
+    ["src/core/Compatibility.lua"] = [[
+return function(context)
+    local Players = game:GetService("Players")
+    local Workspace = game:GetService("Workspace")
+    local RunService = game:GetService("RunService")
+    local UserInputService = game:GetService("UserInputService")
+    local GuiService = game:GetService("GuiService")
+
+    local Config = context.Config
+
+    local Compatibility = {
+        Capabilities = {},
+        Disabled = {}
+    }
+
+    local function setCapability(name, ok, detail)
+        Compatibility.Capabilities[name] = {
+            Ok = ok == true,
+            Detail = detail
+        }
+
+        return ok == true
+    end
+
+    local function disable(feature, reason)
+        Compatibility.Disabled[feature] = reason
+
+        if Config.Diagnostics then
+            Config.Diagnostics.LastMessage = tostring(feature) .. " disabled: " .. tostring(reason)
+        end
+    end
+
+    local function testDrawing()
+        if typeof(Drawing) ~= "table" or typeof(Drawing.new) ~= "function" then
+            return false, "Drawing.new is unavailable"
+        end
+
+        local ok, err = pcall(function()
+            local circle = Drawing.new("Circle")
+            circle.Visible = false
+            circle.Radius = 12
+            circle.Position = Vector2.new(20, 20)
+            circle.Color = Color3.fromRGB(255, 255, 255)
+
+            if circle.Remove then
+                circle:Remove()
+            end
+
+            local text = Drawing.new("Text")
+            text.Visible = false
+            text.Text = "compat"
+            text.Position = Vector2.new(20, 20)
+
+            if text.Remove then
+                text:Remove()
+            end
+        end)
+
+        return ok, err
+    end
+
+    local function ensureFolder(path)
+        if typeof(isfolder) ~= "function" or typeof(makefolder) ~= "function" then
+            return false
+        end
+
+        if not isfolder(path) then
+            makefolder(path)
+        end
+
+        return true
+    end
+
+    local function testFileSystem()
+        if typeof(writefile) ~= "function"
+            or typeof(readfile) ~= "function"
+            or typeof(isfile) ~= "function"
+            or typeof(isfolder) ~= "function"
+            or typeof(makefolder) ~= "function" then
+            return false, "file API is incomplete"
+        end
+
+        local ok, err = pcall(function()
+            ensureFolder("CometPrivate")
+            local path = "CometPrivate/compat.tmp"
+            writefile(path, "ok")
+
+            if not isfile(path) then
+                error("isfile returned false after writefile")
+            end
+
+            if readfile(path) ~= "ok" then
+                error("readfile did not match written content")
+            end
+
+            if typeof(delfile) == "function" then
+                pcall(function()
+                    delfile(path)
+                end)
+            end
+        end)
+
+        return ok, err
+    end
+
+    local function testHttpGet()
+        if typeof(game.HttpGet) ~= "function" then
+            return false, "game:HttpGet is unavailable"
+        end
+
+        return true
+    end
+
+    local function testCameraProjection()
+        local camera = Workspace.CurrentCamera
+
+        if not camera then
+            return true, "deferred until Workspace.CurrentCamera exists"
+        end
+
+        local ok, err = pcall(function()
+            camera:WorldToViewportPoint(camera.CFrame.Position + camera.CFrame.LookVector)
+        end)
+
+        if not ok then
+            return false, err
+        end
+
+        return true
+    end
+
+    local function testGuiInset()
+        local ok, err = pcall(function()
+            GuiService:GetGuiInset()
+        end)
+
+        if not ok then
+            return false, err
+        end
+
+        return true
+    end
+
+    local function testMouseLocation()
+        local ok, err = pcall(function()
+            UserInputService:GetMouseLocation()
+        end)
+
+        if not ok then
+            return false, err
+        end
+
+        return true
+    end
+
+    local function testRenderStep()
+        local ok, result = pcall(function()
+            return typeof(RunService.BindToRenderStep) == "function" and typeof(RunService.UnbindFromRenderStep) == "function"
+        end)
+
+        if not ok then
+            return false, result
+        end
+
+        return result, result and nil or "BindToRenderStep/UnbindFromRenderStep unavailable"
+    end
+
+    local function testLocalPlayer()
+        if Players.LocalPlayer then
+            return true
+        end
+
+        return false, "Players.LocalPlayer is nil"
+    end
+
+    local function applyFeatureFallbacks()
+        if not Compatibility.supports("Drawing") then
+            Config.UI.Enabled = false
+            Config.Feature2.Style1 = false
+            Config.Feature2.Style2 = false
+            Config.Feature2.Style3 = false
+            Config.Feature2.Style4 = false
+            Config.Feature2.Style5 = false
+            disable("Overlay", "Drawing API is unavailable or incomplete")
+        end
+
+        if not Compatibility.supports("FileSystem") then
+            disable("Profiles", "file API is unavailable or incomplete")
+        end
+
+        if not Compatibility.supports("HttpGet") or not Compatibility.supports("Loadstring") then
+            Config.GUI.Enabled = false
+            disable("ExternalUI", "external UI libraries require HttpGet and loadstring")
+            disable("VersionCheck", "remote version checks require HttpGet and loadstring")
+        end
+
+        if not Compatibility.supports("CameraProjection") then
+            Config.Feature1.Enabled = false
+            disable("Aiming", "camera projection is unavailable")
+        end
+    end
+
+    function Compatibility.supports(name)
+        local capability = Compatibility.Capabilities[name]
+        return capability ~= nil and capability.Ok == true
+    end
+
+    function Compatibility.report()
+        local lines = {}
+
+        for name, capability in pairs(Compatibility.Capabilities) do
+            local status = capability.Ok and "OK" or "Missing"
+            local detail = capability.Detail and (": " .. tostring(capability.Detail)) or ""
+            lines[#lines + 1] = name .. " - " .. status .. detail
+        end
+
+        for feature, reason in pairs(Compatibility.Disabled) do
+            lines[#lines + 1] = "Disabled " .. feature .. " - " .. tostring(reason)
+        end
+
+        table.sort(lines)
+
+        return table.concat(lines, "\n")
+    end
+
+    setCapability("Loadstring", typeof(loadstring) == "function", "required for remote/bundled module execution")
+    setCapability("HttpGet", testHttpGet())
+    setCapability("Task", typeof(task) == "table" and typeof(task.spawn) == "function" and typeof(task.wait) == "function", "task.spawn/task.wait")
+    setCapability("TaskDelay", typeof(task) == "table" and typeof(task.delay) == "function", "task.delay")
+    setCapability("Drawing", testDrawing())
+    setCapability("FileSystem", testFileSystem())
+    setCapability("CameraProjection", testCameraProjection())
+    setCapability("GuiInset", testGuiInset())
+    setCapability("MouseLocation", testMouseLocation())
+    setCapability("RenderStep", testRenderStep())
+    setCapability("LocalPlayer", testLocalPlayer())
+
+    applyFeatureFallbacks()
+
+    context.Compatibility = Compatibility
+
+    if context.Diagnostics then
+        context.Diagnostics.Compatibility = {
+            Capabilities = Compatibility.Capabilities,
+            Disabled = Compatibility.Disabled
+        }
+    end
+
+    return Compatibility
 end
 
 ]],
@@ -420,6 +674,8 @@ end
 return function(context)
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
+    local Compatibility = context.Compatibility
+    local drawingReady = Compatibility == nil or Compatibility.supports("Drawing")
 
     local PlayerCache = {
         players = {}
@@ -438,11 +694,20 @@ return function(context)
     end
 
     local function createDrawing(kind)
-        return Drawing.new(kind)
+        local ok, drawing = pcall(function()
+            return Drawing.new(kind)
+        end)
+
+        if ok then
+            return drawing
+        end
+
+        drawingReady = false
+        return nil
     end
 
     function PlayerCache.setup(player)
-        if player == LocalPlayer then
+        if player == LocalPlayer or not drawingReady then
             return nil
         end
 
@@ -459,6 +724,11 @@ return function(context)
             Line = createDrawing("Line"),
             Lines = {}
         }
+
+        if not items.Box or not items.Text1 or not items.Bar or not items.Text2 or not items.Text3 or not items.Line then
+            removeDrawing(items)
+            return nil
+        end
 
         items.Box.Thickness = 2
         items.Box.Transparency = 1
@@ -1673,6 +1943,24 @@ return function(context)
     local Camera = Workspace.CurrentCamera
     local LocalPlayer = Players.LocalPlayer
     local Config = context.Config
+    local Compatibility = context.Compatibility
+
+    if Compatibility and not Compatibility.supports("Drawing") then
+        local Overlay = {
+            drawings = {}
+        }
+
+        function Overlay.setVisible() end
+        function Overlay.hidePlayer() end
+        function Overlay.hideAll() end
+        function Overlay.updateCircle() end
+        function Overlay.updatePlayer() end
+        function Overlay.updateAll() end
+
+        context.Overlay = Overlay
+
+        return Overlay
+    end
 
     local Overlay = {
         drawings = {}
@@ -2426,6 +2714,13 @@ return function(context)
     end
 
     function UIAdapter.createWindow(opts)
+        local compatibility = context.Compatibility
+
+        if compatibility and (not compatibility.supports("HttpGet") or not compatibility.supports("Loadstring")) then
+            setDiagnostics("External UI disabled: HttpGet/loadstring support is incomplete")
+            return nil
+        end
+
         local requested = Config.UI.Provider or "Fluent"
         local attempts = {}
 
@@ -2659,12 +2954,19 @@ return function(context)
         local runtime = diagnostics.Runtime or {}
         local moduleCount = 0
         local failedCount = 0
+        local disabledCount = 0
 
         for _, status in pairs(diagnostics.Modules or {}) do
             moduleCount += 1
 
             if status.Status ~= "Loaded" then
                 failedCount += 1
+            end
+        end
+
+        if context.Compatibility then
+            for _ in pairs(context.Compatibility.Disabled) do
+                disabledCount += 1
             end
         end
 
@@ -2681,6 +2983,7 @@ return function(context)
             "Version: " .. versionText,
             "UI: " .. tostring(Config.UI.Provider),
             "Profile: " .. tostring(Config.Profiles.Active),
+            "Disabled features: " .. tostring(disabledCount),
             "FPS: " .. fps,
             "Frame: " .. frameMs .. " ms",
             "Cached models: " .. cachedModels,
@@ -3341,6 +3644,20 @@ return function(context)
         })
 
         tab:addButton({
+            title = "Show Compatibility",
+            description = "Displays executor capability checks.",
+            callback = function()
+                local compatibility = context.Compatibility
+
+                if compatibility and compatibility.report then
+                    Gui.notify("Comet Compatibility", compatibility.report(), 10)
+                else
+                    Gui.notify("Comet Compatibility", "Compatibility module is unavailable.", 5)
+                end
+            end
+        })
+
+        tab:addButton({
             title = "Check Version",
             callback = function()
                 if context.VersionCheck and context.VersionCheck.check then
@@ -3589,6 +3906,18 @@ return function(context)
     end
 
     function VersionCheck.check()
+        local compatibility = context.Compatibility
+
+        if compatibility and (not compatibility.supports("HttpGet") or not compatibility.supports("Loadstring")) then
+            if Config.Version then
+                Config.Version.Status = "Unknown"
+                Config.Version.Severity = "Compatibility"
+            end
+
+            VersionCheck.lastError = "HttpGet/loadstring support is incomplete"
+            return Config.Version and Config.Version.Status or nil
+        end
+
         local version = Config.Version
 
         if not version then
@@ -3629,6 +3958,13 @@ return function(context)
 
     function VersionCheck.start()
         if VersionCheck.running then
+            return VersionCheck
+        end
+
+        local compatibility = context.Compatibility
+
+        if compatibility and (not compatibility.supports("HttpGet") or not compatibility.supports("Loadstring")) then
+            VersionCheck.check()
             return VersionCheck
         end
 
@@ -4124,8 +4460,8 @@ end
 
 local DEFAULT_MANIFEST = {
     Name = "Comet",
-    Version = "1.2.2",
-    Build = 122,
+    Version = "1.2.3",
+    Build = 123,
     Channel = "stable",
     Cache = "build",
     RequiredLoader = 2,
@@ -4133,6 +4469,7 @@ local DEFAULT_MANIFEST = {
         {Name = "Version", Path = "src/core/Version.lua", Required = true},
         {Name = "Config", Path = "src/core/Config.lua", Required = true},
         {Name = "Connections", Path = "src/core/Connections.lua", Required = true},
+        {Name = "Compatibility", Path = "src/core/Compatibility.lua", Required = true},
         {Name = "ConfigMigrator", Path = "src/core/ConfigMigrator.lua", Required = true},
         {Name = "PlayerCache", Path = "src/features/PlayerCache.lua", Required = true},
         {Name = "Targeting", Path = "src/features/Targeting.lua", Required = true},

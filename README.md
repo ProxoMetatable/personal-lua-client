@@ -82,6 +82,29 @@ The build script writes `dist/client.lua` and validates that every manifest path
 - Runtime diagnostics track FPS, frame time, overlay time, targeting time, cached model count, active state, and current target.
 - The Diagnostics tab can show the current runtime snapshot and manually trigger a version check.
 - Render-step overlay/targeting errors are caught and warning-throttled so a repeated runtime issue does not spam the console every frame.
+- `src/core/Compatibility.lua` runs executor capability checks at startup and disables unsupported feature areas instead of letting missing APIs break the script.
+- The Diagnostics tab includes a compatibility report when the UI can load.
+
+## Executor Compatibility
+
+The preflight checks these capabilities:
+
+- `loadstring`
+- `game:HttpGet`
+- `Drawing.new` with basic Circle/Text objects
+- file APIs: `writefile`, `readfile`, `isfile`, `isfolder`, `makefolder`
+- `task.spawn`, `task.wait`, and `task.delay`
+- camera projection with `WorldToViewportPoint`
+- GUI inset and mouse location APIs
+- render-step binding
+- `Players.LocalPlayer`
+
+Feature fallbacks:
+
+- Missing `Drawing` disables ESP/FOV overlay only.
+- Missing file APIs disables profile persistence only.
+- Missing `HttpGet` or `loadstring` disables external UI libraries and remote version checks.
+- Missing camera projection disables aiming.
 
 ## Files
 
@@ -91,6 +114,7 @@ The build script writes `dist/client.lua` and validates that every manifest path
 - `src/Main.lua` wires lifecycle, input, player events, character events, and the render loop after Roblox camera updates.
 - `src/core/Version.lua` stores release metadata used by the checker.
 - `src/core/Config.lua` stores default settings.
+- `src/core/Compatibility.lua` checks executor capabilities and applies feature fallbacks.
 - `src/core/ConfigMigrator.lua` snapshots, applies, and migrates saved settings.
 - `src/core/Connections.lua` owns connection registration and cleanup.
 - `src/core/VersionCheck.lua` compares the running release to the remote latest release.

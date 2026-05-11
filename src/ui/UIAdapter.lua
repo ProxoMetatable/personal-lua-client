@@ -421,6 +421,13 @@ return function(context)
     end
 
     function UIAdapter.createWindow(opts)
+        local compatibility = context.Compatibility
+
+        if compatibility and (not compatibility.supports("HttpGet") or not compatibility.supports("Loadstring")) then
+            setDiagnostics("External UI disabled: HttpGet/loadstring support is incomplete")
+            return nil
+        end
+
         local requested = Config.UI.Provider or "Fluent"
         local attempts = {}
 
