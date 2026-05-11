@@ -644,6 +644,30 @@ return function(context)
                 end
             end
         })
+
+        tab:addSection("Performance")
+
+        tab:addSlider("OverlayRate", {
+            title = "ESP Update Rate",
+            min = 5,
+            max = 60,
+            rounding = 1,
+            suffix = "hz",
+            default = Config.UI.OverlayRate or 30,
+            callback = function(value)
+                Config.UI.OverlayRate = math.floor(value)
+                saveConfig()
+            end
+        })
+
+        tab:addToggle("OverlayDrawingInset", {
+            title = "Screen Inset Correction",
+            default = Config.UI.DrawingInset ~= false,
+            callback = function(value)
+                Config.UI.DrawingInset = value
+                saveConfig()
+            end
+        })
     end
 
     local function addWeaponsTab(tab)

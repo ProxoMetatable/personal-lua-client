@@ -2,6 +2,7 @@ return function(context)
     local Players = game:GetService("Players")
     local Workspace = game:GetService("Workspace")
     local UserInputService = game:GetService("UserInputService")
+    local GuiService = game:GetService("GuiService")
 
     local Camera = Workspace.CurrentCamera
     local LocalPlayer = Players.LocalPlayer
@@ -79,11 +80,39 @@ return function(context)
         end
     end
 
+    local function drawingInset()
+        if Config.UI and Config.UI.DrawingInset == false then
+            return Vector2.new(0, 0)
+        end
+
+        local ok, inset = pcall(function()
+            return GuiService:GetGuiInset()
+        end)
+
+        if ok and inset then
+            return Vector2.new(inset.X, inset.Y)
+        end
+
+        return Vector2.new(0, 0)
+    end
+
+    local function toDrawing(point)
+        return point + drawingInset()
+    end
+
+    local function viewportCenter()
+        return Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    end
+
+    local function sameTeam(player)
+        return player and player.Team ~= nil and LocalPlayer.Team ~= nil and player.Team == LocalPlayer.Team
+    end
+
     local function tracerOrigin()
         local origin = Config.Feature2.TracerOrigin or "Bottom"
 
         if origin == "Center" then
-            return Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+            return toDrawing(viewportCenter())
         elseif origin == "Mouse" then
             local ok, location = pcall(function()
                 return UserInputService:GetMouseLocation()
@@ -94,7 +123,7 @@ return function(context)
             end
         end
 
-        return Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+        return toDrawing(Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y))
     end
 
     local function updateVersionBadge()
@@ -118,12 +147,13 @@ return function(context)
             width = math.max(120, versionText.TextBounds.X)
         end)
 
-        local x = Camera.ViewportSize.X - width - 12
-        local y = 12
+        local inset = drawingInset()
+        local x = Camera.ViewportSize.X + inset.X - width - 12
+        local y = inset.Y + 12
 
         if x < 12 then
             x = 12
-            y = 8
+            y = inset.Y + 8
         end
 
         versionText.Position = Vector2.new(x, y)
@@ -152,7 +182,7 @@ return function(context)
         Camera = Workspace.CurrentCamera
         circle.Visible = Config.UI.Enabled and Config.Feature1.Enabled
         circle.Radius = Config.Feature1.Range
-        circle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+        circle.Position = toDrawing(viewportCenter())
     end
 
     function Overlay.updatePlayer(player, data)
@@ -215,13 +245,13 @@ return function(context)
         data.Text2.Size = textSize
         data.Text3.Size = textSize
 
-        if Config.Feature2.UseTeam and player.Team == LocalPlayer.Team then
+        if Config.Feature2.UseTeam and sameTeam(player) then
             col = Color3.fromRGB(0, 255, 0)
         end
 
         if Config.Feature2.Style1 then
             data.Box.Size = Vector2.new(w, h)
-            data.Box.Position = Vector2.new(top.X - w / 2, top.Y)
+            data.Box.Position = toDrawing(Vector2.new(top.X - w / 2, top.Y))
             data.Box.Color = col
             data.Box.Visible = true
         else
@@ -230,7 +260,7 @@ return function(context)
 
         if Config.Feature2.Style2 then
             data.Text1.Text = player.Name
-            data.Text1.Position = Vector2.new(rPos.X, top.Y - 15)
+            data.Text1.Position = toDrawing(Vector2.new(rPos.X, top.Y - 15))
             data.Text1.Color = col
             data.Text1.Visible = true
         else
@@ -247,12 +277,12 @@ return function(context)
             local pct = math.clamp(health / maxHealthValue, 0, 1)
 
             data.Bar.Size = Vector2.new(4, h * pct)
-            data.Bar.Position = Vector2.new(top.X - w / 2 - 6, top.Y + h * (1 - pct))
+            data.Bar.Position = toDrawing(Vector2.new(top.X - w / 2 - 6, top.Y + h * (1 - pct)))
             data.Bar.Color = Color3.fromRGB(255 - (255 * pct), 255 * pct, 0)
             data.Bar.Visible = true
 
             data.Text2.Text = tostring(math.floor(health))
-            data.Text2.Position = Vector2.new(top.X - w / 2 - 20, top.Y + h / 2)
+            data.Text2.Position = toDrawing(Vector2.new(top.X - w / 2 - 20, top.Y + h / 2))
             data.Text2.Color = data.Bar.Color
             data.Text2.Visible = true
         else
@@ -268,7 +298,7 @@ return function(context)
                 local d = math.floor((localRoot.Position - root.Position).Magnitude)
 
                 data.Text3.Text = d .. " studs"
-                data.Text3.Position = Vector2.new(rPos.X, bot.Y + 5)
+                data.Text3.Position = toDrawing(Vector2.new(rPos.X, bot.Y + 5))
                 data.Text3.Color = col
                 data.Text3.Visible = true
             else
@@ -280,7 +310,7 @@ return function(context)
 
         if Config.Feature2.Style5 then
             data.Line.From = tracerOrigin()
-            data.Line.To = Vector2.new(rPos.X, rPos.Y)
+            data.Line.To = toDrawing(Vector2.new(rPos.X, rPos.Y))
             data.Line.Color = col
             data.Line.Visible = true
         else

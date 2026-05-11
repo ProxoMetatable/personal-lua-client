@@ -73,12 +73,15 @@ The build script writes `dist/client.lua` and validates that every manifest path
 - The overlay supports boxes, names, health bars, distances, tracers, range circle, and version badge.
 - Text size, box thickness, tracer origin, team color use, and main color are saved in profiles.
 - Tracer origin can be `Bottom`, `Center`, or `Mouse`.
+- ESP updates are throttled separately from camera assist; default is 30 Hz.
+- Screen inset correction is enabled by default for executor Drawing alignment.
 
 ## Diagnostics
 
 - Loader/module status is stored in `context.Diagnostics`.
 - Runtime diagnostics track FPS, frame time, overlay time, targeting time, cached model count, active state, and current target.
 - The Diagnostics tab can show the current runtime snapshot and manually trigger a version check.
+- Render-step overlay/targeting errors are caught and warning-throttled so a repeated runtime issue does not spam the console every frame.
 
 ## Files
 

@@ -2,7 +2,7 @@ return function(context)
     local Config = context.Config
 
     local ConfigMigrator = {
-        CurrentVersion = 6
+        CurrentVersion = 7
     }
 
     local function encodeColor(color)
@@ -109,7 +109,9 @@ return function(context)
                 Provider = Config.UI.Provider,
                 Theme = Config.UI.Theme,
                 Acrylic = Config.UI.Acrylic,
-                Transparency = Config.UI.Transparency
+                Transparency = Config.UI.Transparency,
+                DrawingInset = Config.UI.DrawingInset,
+                OverlayRate = Config.UI.OverlayRate
             },
             GUI = {
                 Enabled = Config.GUI.Enabled
@@ -196,6 +198,8 @@ return function(context)
             setString(Config.UI, "Theme", ui.Theme)
             setBoolean(Config.UI, "Acrylic", ui.Acrylic)
             setBoolean(Config.UI, "Transparency", ui.Transparency)
+            setBoolean(Config.UI, "DrawingInset", ui.DrawingInset)
+            setNumber(Config.UI, "OverlayRate", ui.OverlayRate, 5, 60, true)
         end
 
         if type(data.GUI) == "table" then

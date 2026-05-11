@@ -123,7 +123,19 @@ return function(context)
         return root.Position.Y >= localRoot.Position.Y - (Config.Feature1.MaxBelowLocal or 220)
     end
 
+    local function sameTeam(player)
+        if not player or not Config.Feature1.Check2 then
+            return false
+        end
+
+        return player.Team ~= nil and LocalPlayer.Team ~= nil and player.Team == LocalPlayer.Team
+    end
+
     local function inAimRange(part, screenCenter, rangeSquared)
+        if not Camera or not part then
+            return false, rangeSquared
+        end
+
         local pos, visible = Camera:WorldToViewportPoint(part.Position)
 
         if not visible then
@@ -225,7 +237,7 @@ return function(context)
             return best
         end
 
-        if player and Config.Feature1.Check2 and player.Team == LocalPlayer.Team then
+        if sameTeam(player) then
             return best
         end
 
@@ -311,7 +323,7 @@ return function(context)
             return false
         end
 
-        if current.Player and Config.Feature1.Check2 and current.Player.Team == LocalPlayer.Team then
+        if sameTeam(current.Player) then
             return false
         end
 
@@ -331,6 +343,11 @@ return function(context)
 
     function Targeting.findTarget()
         Camera = Workspace.CurrentCamera
+
+        if not Camera then
+            Targeting.current = nil
+            return nil
+        end
 
         local range = Config.Feature1.Range or 150
         local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
@@ -361,6 +378,11 @@ return function(context)
         end
 
         Camera = Workspace.CurrentCamera
+
+        if not Camera then
+            Targeting.current = nil
+            return nil
+        end
 
         local now = os.clock()
         local interval = Config.Feature1.ScanInterval or 0.05

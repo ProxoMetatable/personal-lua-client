@@ -17,6 +17,11 @@ return function(context)
     local Main = {
         running = false
     }
+    local lastOverlayUpdate = 0
+    local errorState = {
+        Overlay = {Count = 0, LastWarn = 0, Disabled = false},
+        Targeting = {Count = 0, LastWarn = 0, Disabled = false}
+    }
 
     context.LocalCharacter = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 
@@ -166,6 +171,62 @@ return function(context)
         return "unknown"
     end
 
+    local function rememberRuntimeError(name, err)
+        local state = errorState[name]
+
+        if not state then
+            return
+        end
+
+        state.Count += 1
+
+        local diagnostics = context.Diagnostics
+
+        if diagnostics then
+            diagnostics.Runtime = diagnostics.Runtime or {}
+            diagnostics.Runtime.LastError = tostring(name) .. ": " .. tostring(err)
+            diagnostics.Runtime[name .. "Errors"] = state.Count
+        end
+
+        local now = os.clock()
+
+        if now - state.LastWarn >= 5 then
+            state.LastWarn = now
+            warn("Comet " .. name .. " error: " .. tostring(err))
+        end
+
+        if state.Count >= 10 then
+            state.Disabled = true
+            warn("Comet " .. name .. " disabled after repeated runtime errors.")
+        end
+    end
+
+    local function clearRuntimeError(name)
+        local state = errorState[name]
+
+        if state then
+            state.Count = 0
+        end
+    end
+
+    local function runSafe(name, callback)
+        local state = errorState[name]
+
+        if state and state.Disabled then
+            return false, nil
+        end
+
+        local ok, result = pcall(callback)
+
+        if ok then
+            clearRuntimeError(name)
+            return true, result
+        end
+
+        rememberRuntimeError(name, result)
+        return false, nil
+    end
+
     local function updateRuntimeDiagnostics(startedAt, overlayStartedAt, overlayFinishedAt, targetStartedAt, targetFinishedAt, target)
         local diagnostics = context.Diagnostics
 
@@ -244,18 +305,29 @@ return function(context)
 
         syncAimState()
 
-        local overlayStartedAt = os.clock()
+        local overlayStartedAt = nil
+        local overlayFinishedAt = nil
+        local now = os.clock()
+        local overlayRate = math.clamp(tonumber(Config.UI and Config.UI.OverlayRate) or 30, 5, 60)
 
-        if Overlay and Overlay.updateAll then
-            Overlay.updateAll()
+        if Overlay and Overlay.updateAll and now - lastOverlayUpdate >= 1 / overlayRate then
+            lastOverlayUpdate = now
+            overlayStartedAt = os.clock()
+            runSafe("Overlay", function()
+                Overlay.updateAll()
+            end)
+            overlayFinishedAt = os.clock()
         end
 
-        local overlayFinishedAt = os.clock()
         local targetStartedAt = os.clock()
         local target = nil
 
         if Targeting and Targeting.update then
-            target = Targeting.update()
+            local _, result = runSafe("Targeting", function()
+                return Targeting.update()
+            end)
+
+            target = result
         end
 
         local targetFinishedAt = os.clock()

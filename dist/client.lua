@@ -7,8 +7,8 @@ local BUNDLED_SOURCES = {
     ["Manifest.lua"] = [[
 return {
     Name = "Comet",
-    Version = "1.2.1",
-    Build = 121,
+    Version = "1.2.2",
+    Build = 122,
     Channel = "stable",
     Cache = "build",
     RequiredLoader = 2,
@@ -36,9 +36,9 @@ return {
 ]],
     ["src/core/Version.lua"] = [[
 return {
-    Number = "1.2.1",
-    Version = "1.2.1",
-    Build = 121,
+    Number = "1.2.2",
+    Version = "1.2.2",
+    Build = 122,
     Channel = "stable",
     MinLoader = 2,
     Changelog = {
@@ -47,7 +47,10 @@ return {
         "Added Fluent UI provider support",
         "Added profiles, keybind settings, and diagnostics",
         "Added debounced config saves",
-        "Added production bundle output"
+        "Added production bundle output",
+        "Fixed Drawing coordinate inset alignment",
+        "Added render-step error throttling",
+        "Throttled ESP updates independently from aimbot updates"
     }
 }
 
@@ -56,14 +59,14 @@ return {
 return function(context)
     local release = context.Version or {}
     local manifest = context.Manifest or {}
-    local versionNumber = release.Version or release.Number or manifest.Version or "1.2.1"
+    local versionNumber = release.Version or release.Number or manifest.Version or "1.2.2"
 
     local Config = {
         Name = "Comet",
         Version = {
             Number = versionNumber,
             Latest = nil,
-            Build = tonumber(release.Build) or tonumber(manifest.Build) or 121,
+            Build = tonumber(release.Build) or tonumber(manifest.Build) or 122,
             LatestBuild = nil,
             Channel = release.Channel or manifest.Channel or "stable",
             Status = "Checking",
@@ -118,7 +121,9 @@ return function(context)
             Provider = "Fluent",
             Theme = "Dark",
             Acrylic = false,
-            Transparency = false
+            Transparency = false,
+            DrawingInset = true,
+            OverlayRate = 30
         },
         GUI = {
             Enabled = true
@@ -186,7 +191,7 @@ return function(context)
     local Config = context.Config
 
     local ConfigMigrator = {
-        CurrentVersion = 6
+        CurrentVersion = 7
     }
 
     local function encodeColor(color)
@@ -293,7 +298,9 @@ return function(context)
                 Provider = Config.UI.Provider,
                 Theme = Config.UI.Theme,
                 Acrylic = Config.UI.Acrylic,
-                Transparency = Config.UI.Transparency
+                Transparency = Config.UI.Transparency,
+                DrawingInset = Config.UI.DrawingInset,
+                OverlayRate = Config.UI.OverlayRate
             },
             GUI = {
                 Enabled = Config.GUI.Enabled
@@ -380,6 +387,8 @@ return function(context)
             setString(Config.UI, "Theme", ui.Theme)
             setBoolean(Config.UI, "Acrylic", ui.Acrylic)
             setBoolean(Config.UI, "Transparency", ui.Transparency)
+            setBoolean(Config.UI, "DrawingInset", ui.DrawingInset)
+            setNumber(Config.UI, "OverlayRate", ui.OverlayRate, 5, 60, true)
         end
 
         if type(data.GUI) == "table" then
@@ -631,7 +640,19 @@ return function(context)
         return root.Position.Y >= localRoot.Position.Y - (Config.Feature1.MaxBelowLocal or 220)
     end
 
+    local function sameTeam(player)
+        if not player or not Config.Feature1.Check2 then
+            return false
+        end
+
+        return player.Team ~= nil and LocalPlayer.Team ~= nil and player.Team == LocalPlayer.Team
+    end
+
     local function inAimRange(part, screenCenter, rangeSquared)
+        if not Camera or not part then
+            return false, rangeSquared
+        end
+
         local pos, visible = Camera:WorldToViewportPoint(part.Position)
 
         if not visible then
@@ -733,7 +754,7 @@ return function(context)
             return best
         end
 
-        if player and Config.Feature1.Check2 and player.Team == LocalPlayer.Team then
+        if sameTeam(player) then
             return best
         end
 
@@ -819,7 +840,7 @@ return function(context)
             return false
         end
 
-        if current.Player and Config.Feature1.Check2 and current.Player.Team == LocalPlayer.Team then
+        if sameTeam(current.Player) then
             return false
         end
 
@@ -839,6 +860,11 @@ return function(context)
 
     function Targeting.findTarget()
         Camera = Workspace.CurrentCamera
+
+        if not Camera then
+            Targeting.current = nil
+            return nil
+        end
 
         local range = Config.Feature1.Range or 150
         local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
@@ -869,6 +895,11 @@ return function(context)
         end
 
         Camera = Workspace.CurrentCamera
+
+        if not Camera then
+            Targeting.current = nil
+            return nil
+        end
 
         local now = os.clock()
         local interval = Config.Feature1.ScanInterval or 0.05
@@ -1637,6 +1668,7 @@ return function(context)
     local Players = game:GetService("Players")
     local Workspace = game:GetService("Workspace")
     local UserInputService = game:GetService("UserInputService")
+    local GuiService = game:GetService("GuiService")
 
     local Camera = Workspace.CurrentCamera
     local LocalPlayer = Players.LocalPlayer
@@ -1714,11 +1746,39 @@ return function(context)
         end
     end
 
+    local function drawingInset()
+        if Config.UI and Config.UI.DrawingInset == false then
+            return Vector2.new(0, 0)
+        end
+
+        local ok, inset = pcall(function()
+            return GuiService:GetGuiInset()
+        end)
+
+        if ok and inset then
+            return Vector2.new(inset.X, inset.Y)
+        end
+
+        return Vector2.new(0, 0)
+    end
+
+    local function toDrawing(point)
+        return point + drawingInset()
+    end
+
+    local function viewportCenter()
+        return Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    end
+
+    local function sameTeam(player)
+        return player and player.Team ~= nil and LocalPlayer.Team ~= nil and player.Team == LocalPlayer.Team
+    end
+
     local function tracerOrigin()
         local origin = Config.Feature2.TracerOrigin or "Bottom"
 
         if origin == "Center" then
-            return Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+            return toDrawing(viewportCenter())
         elseif origin == "Mouse" then
             local ok, location = pcall(function()
                 return UserInputService:GetMouseLocation()
@@ -1729,7 +1789,7 @@ return function(context)
             end
         end
 
-        return Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+        return toDrawing(Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y))
     end
 
     local function updateVersionBadge()
@@ -1753,12 +1813,13 @@ return function(context)
             width = math.max(120, versionText.TextBounds.X)
         end)
 
-        local x = Camera.ViewportSize.X - width - 12
-        local y = 12
+        local inset = drawingInset()
+        local x = Camera.ViewportSize.X + inset.X - width - 12
+        local y = inset.Y + 12
 
         if x < 12 then
             x = 12
-            y = 8
+            y = inset.Y + 8
         end
 
         versionText.Position = Vector2.new(x, y)
@@ -1787,7 +1848,7 @@ return function(context)
         Camera = Workspace.CurrentCamera
         circle.Visible = Config.UI.Enabled and Config.Feature1.Enabled
         circle.Radius = Config.Feature1.Range
-        circle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+        circle.Position = toDrawing(viewportCenter())
     end
 
     function Overlay.updatePlayer(player, data)
@@ -1850,13 +1911,13 @@ return function(context)
         data.Text2.Size = textSize
         data.Text3.Size = textSize
 
-        if Config.Feature2.UseTeam and player.Team == LocalPlayer.Team then
+        if Config.Feature2.UseTeam and sameTeam(player) then
             col = Color3.fromRGB(0, 255, 0)
         end
 
         if Config.Feature2.Style1 then
             data.Box.Size = Vector2.new(w, h)
-            data.Box.Position = Vector2.new(top.X - w / 2, top.Y)
+            data.Box.Position = toDrawing(Vector2.new(top.X - w / 2, top.Y))
             data.Box.Color = col
             data.Box.Visible = true
         else
@@ -1865,7 +1926,7 @@ return function(context)
 
         if Config.Feature2.Style2 then
             data.Text1.Text = player.Name
-            data.Text1.Position = Vector2.new(rPos.X, top.Y - 15)
+            data.Text1.Position = toDrawing(Vector2.new(rPos.X, top.Y - 15))
             data.Text1.Color = col
             data.Text1.Visible = true
         else
@@ -1882,12 +1943,12 @@ return function(context)
             local pct = math.clamp(health / maxHealthValue, 0, 1)
 
             data.Bar.Size = Vector2.new(4, h * pct)
-            data.Bar.Position = Vector2.new(top.X - w / 2 - 6, top.Y + h * (1 - pct))
+            data.Bar.Position = toDrawing(Vector2.new(top.X - w / 2 - 6, top.Y + h * (1 - pct)))
             data.Bar.Color = Color3.fromRGB(255 - (255 * pct), 255 * pct, 0)
             data.Bar.Visible = true
 
             data.Text2.Text = tostring(math.floor(health))
-            data.Text2.Position = Vector2.new(top.X - w / 2 - 20, top.Y + h / 2)
+            data.Text2.Position = toDrawing(Vector2.new(top.X - w / 2 - 20, top.Y + h / 2))
             data.Text2.Color = data.Bar.Color
             data.Text2.Visible = true
         else
@@ -1903,7 +1964,7 @@ return function(context)
                 local d = math.floor((localRoot.Position - root.Position).Magnitude)
 
                 data.Text3.Text = d .. " studs"
-                data.Text3.Position = Vector2.new(rPos.X, bot.Y + 5)
+                data.Text3.Position = toDrawing(Vector2.new(rPos.X, bot.Y + 5))
                 data.Text3.Color = col
                 data.Text3.Visible = true
             else
@@ -1915,7 +1976,7 @@ return function(context)
 
         if Config.Feature2.Style5 then
             data.Line.From = tracerOrigin()
-            data.Line.To = Vector2.new(rPos.X, rPos.Y)
+            data.Line.To = toDrawing(Vector2.new(rPos.X, rPos.Y))
             data.Line.Color = col
             data.Line.Visible = true
         else
@@ -3041,6 +3102,30 @@ return function(context)
                 end
             end
         })
+
+        tab:addSection("Performance")
+
+        tab:addSlider("OverlayRate", {
+            title = "ESP Update Rate",
+            min = 5,
+            max = 60,
+            rounding = 1,
+            suffix = "hz",
+            default = Config.UI.OverlayRate or 30,
+            callback = function(value)
+                Config.UI.OverlayRate = math.floor(value)
+                saveConfig()
+            end
+        })
+
+        tab:addToggle("OverlayDrawingInset", {
+            title = "Screen Inset Correction",
+            default = Config.UI.DrawingInset ~= false,
+            callback = function(value)
+                Config.UI.DrawingInset = value
+                saveConfig()
+            end
+        })
     end
 
     local function addWeaponsTab(tab)
@@ -3599,6 +3684,11 @@ return function(context)
     local Main = {
         running = false
     }
+    local lastOverlayUpdate = 0
+    local errorState = {
+        Overlay = {Count = 0, LastWarn = 0, Disabled = false},
+        Targeting = {Count = 0, LastWarn = 0, Disabled = false}
+    }
 
     context.LocalCharacter = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 
@@ -3748,6 +3838,62 @@ return function(context)
         return "unknown"
     end
 
+    local function rememberRuntimeError(name, err)
+        local state = errorState[name]
+
+        if not state then
+            return
+        end
+
+        state.Count += 1
+
+        local diagnostics = context.Diagnostics
+
+        if diagnostics then
+            diagnostics.Runtime = diagnostics.Runtime or {}
+            diagnostics.Runtime.LastError = tostring(name) .. ": " .. tostring(err)
+            diagnostics.Runtime[name .. "Errors"] = state.Count
+        end
+
+        local now = os.clock()
+
+        if now - state.LastWarn >= 5 then
+            state.LastWarn = now
+            warn("Comet " .. name .. " error: " .. tostring(err))
+        end
+
+        if state.Count >= 10 then
+            state.Disabled = true
+            warn("Comet " .. name .. " disabled after repeated runtime errors.")
+        end
+    end
+
+    local function clearRuntimeError(name)
+        local state = errorState[name]
+
+        if state then
+            state.Count = 0
+        end
+    end
+
+    local function runSafe(name, callback)
+        local state = errorState[name]
+
+        if state and state.Disabled then
+            return false, nil
+        end
+
+        local ok, result = pcall(callback)
+
+        if ok then
+            clearRuntimeError(name)
+            return true, result
+        end
+
+        rememberRuntimeError(name, result)
+        return false, nil
+    end
+
     local function updateRuntimeDiagnostics(startedAt, overlayStartedAt, overlayFinishedAt, targetStartedAt, targetFinishedAt, target)
         local diagnostics = context.Diagnostics
 
@@ -3826,18 +3972,29 @@ return function(context)
 
         syncAimState()
 
-        local overlayStartedAt = os.clock()
+        local overlayStartedAt = nil
+        local overlayFinishedAt = nil
+        local now = os.clock()
+        local overlayRate = math.clamp(tonumber(Config.UI and Config.UI.OverlayRate) or 30, 5, 60)
 
-        if Overlay and Overlay.updateAll then
-            Overlay.updateAll()
+        if Overlay and Overlay.updateAll and now - lastOverlayUpdate >= 1 / overlayRate then
+            lastOverlayUpdate = now
+            overlayStartedAt = os.clock()
+            runSafe("Overlay", function()
+                Overlay.updateAll()
+            end)
+            overlayFinishedAt = os.clock()
         end
 
-        local overlayFinishedAt = os.clock()
         local targetStartedAt = os.clock()
         local target = nil
 
         if Targeting and Targeting.update then
-            target = Targeting.update()
+            local _, result = runSafe("Targeting", function()
+                return Targeting.update()
+            end)
+
+            target = result
         end
 
         local targetFinishedAt = os.clock()
@@ -3967,8 +4124,8 @@ end
 
 local DEFAULT_MANIFEST = {
     Name = "Comet",
-    Version = "1.2.1",
-    Build = 121,
+    Version = "1.2.2",
+    Build = 122,
     Channel = "stable",
     Cache = "build",
     RequiredLoader = 2,
