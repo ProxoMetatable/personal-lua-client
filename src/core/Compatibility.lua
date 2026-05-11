@@ -29,31 +29,99 @@ return function(context)
         end
     end
 
+    local function removeDrawing(obj)
+        if not obj then
+            return
+        end
+
+        pcall(function()
+            obj.Visible = false
+        end)
+
+        pcall(function()
+            if obj.Remove then
+                obj:Remove()
+            end
+        end)
+    end
+
     local function testDrawing()
         if typeof(Drawing) ~= "table" or typeof(Drawing.new) ~= "function" then
             return false, "Drawing.new is unavailable"
         end
 
+        local created = {}
         local ok, err = pcall(function()
-            local circle = Drawing.new("Circle")
-            circle.Visible = false
-            circle.Radius = 12
-            circle.Position = Vector2.new(20, 20)
-            circle.Color = Color3.fromRGB(255, 255, 255)
+            local specs = {
+                {
+                    Type = "Circle",
+                    Properties = {
+                        Visible = false,
+                        Radius = 12,
+                        Position = Vector2.new(20, 20),
+                        Color = Color3.fromRGB(255, 255, 255),
+                        Thickness = 2,
+                        Transparency = 0.75,
+                        Filled = false
+                    }
+                },
+                {
+                    Type = "Square",
+                    Properties = {
+                        Visible = false,
+                        Size = Vector2.new(20, 30),
+                        Position = Vector2.new(20, 20),
+                        Color = Color3.fromRGB(255, 255, 255),
+                        Thickness = 2,
+                        Transparency = 1,
+                        Filled = false
+                    }
+                },
+                {
+                    Type = "Text",
+                    Properties = {
+                        Visible = false,
+                        Text = "compat",
+                        Position = Vector2.new(20, 20),
+                        Color = Color3.fromRGB(255, 255, 255),
+                        Size = 13,
+                        Center = true,
+                        Outline = true,
+                        Font = 2,
+                        Transparency = 1
+                    }
+                },
+                {
+                    Type = "Line",
+                    Properties = {
+                        Visible = false,
+                        From = Vector2.new(0, 0),
+                        To = Vector2.new(20, 20),
+                        Color = Color3.fromRGB(255, 255, 255),
+                        Thickness = 1,
+                        Transparency = 0.8
+                    }
+                }
+            }
 
-            if circle.Remove then
-                circle:Remove()
-            end
+            for _, spec in ipairs(specs) do
+                local drawing = Drawing.new(spec.Type)
 
-            local text = Drawing.new("Text")
-            text.Visible = false
-            text.Text = "compat"
-            text.Position = Vector2.new(20, 20)
+                if not drawing then
+                    error("Drawing.new(" .. spec.Type .. ") returned nil")
+                end
 
-            if text.Remove then
-                text:Remove()
+                created[#created + 1] = drawing
+
+                for property, value in pairs(spec.Properties) do
+                    drawing[property] = value
+                end
             end
         end)
+
+        for _, drawing in ipairs(created) do
+            removeDrawing(drawing)
+        end
 
         return ok, err
     end
@@ -152,7 +220,7 @@ return function(context)
         return true
     end
 
-    local function testRenderStep()
+    local function testBindToRenderStep()
         local ok, result = pcall(function()
             return typeof(RunService.BindToRenderStep) == "function" and typeof(RunService.UnbindFromRenderStep) == "function"
         end)
@@ -162,6 +230,28 @@ return function(context)
         end
 
         return result, result and nil or "BindToRenderStep/UnbindFromRenderStep unavailable"
+    end
+
+    local function testSignal(signalName)
+        local ok, signal = pcall(function()
+            return RunService[signalName]
+        end)
+
+        if not ok or not signal then
+            return false, tostring(signalName) .. " is unavailable"
+        end
+
+        local connected, connectionOrError = pcall(function()
+            return signal:Connect(function() end)
+        end)
+
+        if connected and connectionOrError then
+            pcall(function()
+                connectionOrError:Disconnect()
+            end)
+        end
+
+        return connected, connected and nil or connectionOrError
     end
 
     local function testLocalPlayer()
@@ -197,6 +287,14 @@ return function(context)
             Config.Feature1.Enabled = false
             disable("Aiming", "camera projection is unavailable")
         end
+
+        if not Compatibility.supports("BindToRenderStep")
+            and not Compatibility.supports("RenderStepped")
+            and not Compatibility.supports("Heartbeat") then
+            Config.Feature1.Enabled = false
+            Config.UI.Enabled = false
+            disable("RenderLoop", "no supported frame update signal is available")
+        end
     end
 
     function Compatibility.supports(name)
@@ -231,7 +329,9 @@ return function(context)
     setCapability("CameraProjection", testCameraProjection())
     setCapability("GuiInset", testGuiInset())
     setCapability("MouseLocation", testMouseLocation())
-    setCapability("RenderStep", testRenderStep())
+    setCapability("BindToRenderStep", testBindToRenderStep())
+    setCapability("RenderStepped", testSignal("RenderStepped"))
+    setCapability("Heartbeat", testSignal("Heartbeat"))
     setCapability("LocalPlayer", testLocalPlayer())
 
     applyFeatureFallbacks()

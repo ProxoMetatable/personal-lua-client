@@ -1,14 +1,14 @@
 return function(context)
     local release = context.Version or {}
     local manifest = context.Manifest or {}
-    local versionNumber = release.Version or release.Number or manifest.Version or "1.2.3"
+    local versionNumber = release.Version or release.Number or manifest.Version or "1.2.4"
 
     local Config = {
         Name = "Comet",
         Version = {
             Number = versionNumber,
             Latest = nil,
-            Build = tonumber(release.Build) or tonumber(manifest.Build) or 123,
+            Build = tonumber(release.Build) or tonumber(manifest.Build) or 124,
             LatestBuild = nil,
             Channel = release.Channel or manifest.Channel or "stable",
             Status = "Checking",

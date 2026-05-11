@@ -9,6 +9,10 @@ return function(context)
     }
 
     local function removeDrawing(obj)
+        if not obj then
+            return
+        end
+
         if typeof(obj) == "table" then
             for _, child in pairs(obj) do
                 removeDrawing(child)

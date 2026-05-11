@@ -81,7 +81,7 @@ The build script writes `dist/client.lua` and validates that every manifest path
 - Loader/module status is stored in `context.Diagnostics`.
 - Runtime diagnostics track FPS, frame time, overlay time, targeting time, cached model count, active state, and current target.
 - The Diagnostics tab can show the current runtime snapshot and manually trigger a version check.
-- Render-step overlay/targeting errors are caught and warning-throttled so a repeated runtime issue does not spam the console every frame.
+- Render-loop overlay/targeting errors are caught and warning-throttled so a repeated runtime issue does not spam the console every frame.
 - `src/core/Compatibility.lua` runs executor capability checks at startup and disables unsupported feature areas instead of letting missing APIs break the script.
 - The Diagnostics tab includes a compatibility report when the UI can load.
 
@@ -91,12 +91,12 @@ The preflight checks these capabilities:
 
 - `loadstring`
 - `game:HttpGet`
-- `Drawing.new` with basic Circle/Text objects
+- `Drawing.new` with the Circle, Square, Text, and Line objects/properties used by the ESP/FOV overlay
 - file APIs: `writefile`, `readfile`, `isfile`, `isfolder`, `makefolder`
 - `task.spawn`, `task.wait`, and `task.delay`
 - camera projection with `WorldToViewportPoint`
 - GUI inset and mouse location APIs
-- render-step binding
+- frame loop support through `BindToRenderStep`, `RenderStepped`, or `Heartbeat`
 - `Players.LocalPlayer`
 
 Feature fallbacks:
@@ -105,6 +105,7 @@ Feature fallbacks:
 - Missing file APIs disables profile persistence only.
 - Missing `HttpGet` or `loadstring` disables external UI libraries and remote version checks.
 - Missing camera projection disables aiming.
+- Missing `BindToRenderStep` alone does not disable features; the client falls back to `RenderStepped`, then `Heartbeat`, which is meant for low-level executors such as Solara.
 
 ## Files
 

@@ -29,10 +29,13 @@ return function(context)
     local Overlay = {
         drawings = {}
     }
+    local currentInset = Vector2.new(0, 0)
 
     local circle = Drawing.new("Circle")
     circle.Thickness = 2
-    circle.NumSides = 64
+    pcall(function()
+        circle.NumSides = 64
+    end)
     circle.Radius = Config.Feature1.Range
     circle.Color = Color3.fromRGB(255, 255, 255)
     circle.Transparency = 0.7
@@ -98,7 +101,7 @@ return function(context)
         end
     end
 
-    local function drawingInset()
+    local function resolveDrawingInset()
         if Config.UI and Config.UI.DrawingInset == false then
             return Vector2.new(0, 0)
         end
@@ -114,11 +117,20 @@ return function(context)
         return Vector2.new(0, 0)
     end
 
+    local function refreshDrawingInset()
+        currentInset = resolveDrawingInset()
+        return currentInset
+    end
+
     local function toDrawing(point)
-        return point + drawingInset()
+        return point + currentInset
     end
 
     local function viewportCenter()
+        if not Camera then
+            return Vector2.new(0, 0)
+        end
+
         return Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     end
 
@@ -147,6 +159,11 @@ return function(context)
     local function updateVersionBadge()
         Camera = Workspace.CurrentCamera
 
+        if not Camera then
+            versionText.Visible = false
+            return
+        end
+
         local version = Config.Version or {}
         local status = version.Status or "Checking"
         local number = version.Number or "0.0.0"
@@ -165,7 +182,7 @@ return function(context)
             width = math.max(120, versionText.TextBounds.X)
         end)
 
-        local inset = drawingInset()
+        local inset = currentInset
         local x = Camera.ViewportSize.X + inset.X - width - 12
         local y = inset.Y + 12
 
@@ -196,14 +213,24 @@ return function(context)
         updateVersionBadge()
     end
 
-    function Overlay.updateCircle()
+    function Overlay.updateCircle(insetReady)
         Camera = Workspace.CurrentCamera
+
+        if not Camera then
+            circle.Visible = false
+            return
+        end
+
+        if not insetReady then
+            refreshDrawingInset()
+        end
+
         circle.Visible = Config.UI.Enabled and Config.Feature1.Enabled
         circle.Radius = Config.Feature1.Range
         circle.Position = toDrawing(viewportCenter())
     end
 
-    function Overlay.updatePlayer(player, data)
+    function Overlay.updatePlayer(player, data, insetReady)
         Camera = Workspace.CurrentCamera
 
         if player == LocalPlayer then
@@ -212,6 +239,15 @@ return function(context)
 
         if not data then
             return
+        end
+
+        if not Camera then
+            Overlay.hidePlayer(data)
+            return
+        end
+
+        if not insetReady then
+            refreshDrawingInset()
         end
 
         if not Config.UI.Enabled then
@@ -337,13 +373,27 @@ return function(context)
     end
 
     function Overlay.updateAll()
-        Overlay.updateCircle()
+        Camera = Workspace.CurrentCamera
+
+        if not Camera then
+            circle.Visible = false
+            versionText.Visible = false
+
+            for _, data in pairs(context.PlayerCache.players) do
+                Overlay.hidePlayer(data)
+            end
+
+            return
+        end
+
+        refreshDrawingInset()
+        Overlay.updateCircle(true)
         updateVersionBadge()
 
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer then
                 local data = context.PlayerCache.players[player] or context.PlayerCache.setup(player)
-                Overlay.updatePlayer(player, data)
+                Overlay.updatePlayer(player, data, true)
             end
         end
     end

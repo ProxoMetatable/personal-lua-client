@@ -12,6 +12,7 @@ return function(context)
     local Gui = context.Gui
     local VersionCheck = context.VersionCheck
     local Weapons = context.Weapons
+    local Compatibility = context.Compatibility
     local renderStepName = "CometPrivateMain"
 
     local Main = {
@@ -335,26 +336,78 @@ return function(context)
         updateRuntimeDiagnostics(startedAt, overlayStartedAt, overlayFinishedAt, targetStartedAt, targetFinishedAt, target)
     end
 
-    local function bindRenderStep()
-        pcall(function()
-            RunService:UnbindFromRenderStep(renderStepName)
-        end)
+    local function supports(capability)
+        return not Compatibility or Compatibility.supports(capability)
+    end
 
-        local bound = pcall(function()
-            RunService:BindToRenderStep(renderStepName, Enum.RenderPriority.Camera.Value + 1, step)
-        end)
-
-        if bound then
-            Connections.add("RenderStepped", {
-                Disconnect = function()
-                    pcall(function()
-                        RunService:UnbindFromRenderStep(renderStepName)
-                    end)
-                end
-            })
-        else
-            Connections.add("RenderStepped", RunService.RenderStepped:Connect(step))
+    local function setLoopDiagnostic(mode, detail)
+        if not context.Diagnostics then
+            return
         end
+
+        context.Diagnostics.Runtime = context.Diagnostics.Runtime or {}
+        context.Diagnostics.Runtime.Loop = mode
+        context.Diagnostics.Runtime.LoopDetail = detail
+    end
+
+    local function connectSignalLoop(signalName)
+        local ok, connection = pcall(function()
+            return RunService[signalName]:Connect(step)
+        end)
+
+        if ok and connection then
+            Connections.add("RenderLoop", connection)
+            setLoopDiagnostic(signalName, "connected through RunService." .. signalName)
+            return true
+        end
+
+        return false, connection
+    end
+
+    local function bindRenderLoop()
+        if supports("BindToRenderStep") then
+            pcall(function()
+                RunService:UnbindFromRenderStep(renderStepName)
+            end)
+
+            local bound, err = pcall(function()
+                RunService:BindToRenderStep(renderStepName, Enum.RenderPriority.Camera.Value + 1, step)
+            end)
+
+            if bound then
+                Connections.add("RenderLoop", {
+                    Disconnect = function()
+                        pcall(function()
+                            RunService:UnbindFromRenderStep(renderStepName)
+                        end)
+                    end
+                })
+                setLoopDiagnostic("BindToRenderStep", "bound after camera update priority")
+                return true
+            end
+
+            setLoopDiagnostic("BindToRenderStepFailed", tostring(err))
+        end
+
+        if supports("RenderStepped") then
+            local connected = connectSignalLoop("RenderStepped")
+
+            if connected then
+                return true
+            end
+        end
+
+        if supports("Heartbeat") then
+            local connected = connectSignalLoop("Heartbeat")
+
+            if connected then
+                return true
+            end
+        end
+
+        setLoopDiagnostic("None", "no RunService frame signal could be connected")
+        warn("Comet render loop unavailable; overlay and targeting updates are disabled.")
+        return false
     end
 
     function Main.start()
@@ -403,7 +456,7 @@ return function(context)
         Connections.add("CharacterAdded", LocalPlayer.CharacterAdded:Connect(function(character)
             context.LocalCharacter = character
         end))
-        bindRenderStep()
+        bindRenderLoop()
 
         return Main
     end

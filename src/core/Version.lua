@@ -1,7 +1,7 @@
 return {
-    Number = "1.2.3",
-    Version = "1.2.3",
-    Build = 123,
+    Number = "1.2.4",
+    Version = "1.2.4",
+    Build = 124,
     Channel = "stable",
     MinLoader = 2,
     Changelog = {
@@ -14,6 +14,7 @@ return {
         "Fixed Drawing coordinate inset alignment",
         "Added render-step error throttling",
         "Throttled ESP updates independently from aimbot updates",
-        "Added executor compatibility preflight checks"
+        "Added executor compatibility preflight checks",
+        "Added low-level executor render loop fallback support"
     }
 }
